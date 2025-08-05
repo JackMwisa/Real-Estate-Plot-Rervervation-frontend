@@ -12,6 +12,16 @@ function App() {
     return <h1>This is a component</h1>;
   }
 
+  const DisplayApples = (n) => {
+    if (n === 0) {
+      return 'No apples';
+    }
+    if (n === 1) {
+      return 'One apple';
+    }
+    return `${n} apples`;
+  }
+
   return (
     <>
       <h1>This is an h1</h1>
@@ -25,6 +35,8 @@ function App() {
       {myComponent()}
 
       <Navbar />
+
+      <h1>{DisplayApples(9)}</h1>
 
     </>
   )
