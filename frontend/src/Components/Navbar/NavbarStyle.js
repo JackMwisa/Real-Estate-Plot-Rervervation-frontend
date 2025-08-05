@@ -4,17 +4,12 @@ import InputBase from '@mui/material/InputBase';
 export const Search = styled('div')(({ theme }) => ({
   position: 'relative',
   borderRadius: theme.shape.borderRadius,
-  backgroundColor: theme.palette.mode === 'dark'
-    ? alpha('#ffffff', 0.1)
-    : alpha('#1b5e20', 0.1),
+  backgroundColor: alpha(theme.palette.common.white, 0.15),
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark'
-      ? alpha('#ffffff', 0.2)
-      : alpha('#1b5e20', 0.2),
+    backgroundColor: alpha(theme.palette.common.white, 0.25),
   },
   marginLeft: theme.spacing(1),
   width: '100%',
-  boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
 }));
 
 export const SearchIconWrapper = styled('div')(({ theme }) => ({

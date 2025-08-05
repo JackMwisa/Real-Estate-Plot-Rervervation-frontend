@@ -27,19 +27,52 @@ export default function Navbar({ darkMode, toggleDarkMode }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
   const isMenuOpen = Boolean(anchorEl);
+  const theme = useTheme();
 
   const toggleDrawer = (open) => () => setDrawerOpen(open);
   const handleMenuOpen = (event) => setAnchorEl(event.currentTarget);
   const handleMenuClose = () => setAnchorEl(null);
 
   const drawerContent = (
-    <Box role="presentation" onClick={toggleDrawer(false)} onKeyDown={toggleDrawer(false)} className="w-64">
-      <Typography variant="h6" className="p-4 font-semibold">Navigation</Typography>
+    <Box
+      role="presentation"
+      onClick={toggleDrawer(false)}
+      onKeyDown={toggleDrawer(false)}
+      sx={{
+        width: 250,
+        height: '100%',
+        backgroundColor: theme.palette.background.paper,
+      }}
+    >
+      <Typography
+        variant="h6"
+        sx={{
+          px: 3,
+          pt: 2,
+          pb: 1,
+          fontWeight: 600,
+          color: theme.palette.mode === 'dark' ? '#fff' : '#222',
+        }}
+      >
+        Navigation
+      </Typography>
       <Divider />
       <List>
         {menuLinks.map((item) => (
-          <ListItem button key={item.label} component={Link} to={item.path}>
-            <ListItemText primary={item.label} />
+          <ListItem
+            key={item.label}
+            button
+            component={Link}
+            to={item.path}
+          >
+            <ListItemText
+              primary={item.label}
+              primaryTypographyProps={{
+                fontSize: '1rem',
+                fontWeight: 500,
+                color: theme.palette.mode === 'dark' ? '#fff' : '#333',
+              }}
+            />
           </ListItem>
         ))}
       </List>
@@ -48,17 +81,11 @@ export default function Navbar({ darkMode, toggleDarkMode }) {
 
   return (
     <>
-      <AppBar position="sticky" sx={{ backgroundColor: darkMode ? '#0a2540' : '#4CAF50' }}>
-        <Toolbar className="flex justify-between items-center px-4 py-2">
-          {/* Left */}
-          <Box className="flex items-center gap-4">
-            <IconButton
-              edge="start"
-              color="inherit"
-              onClick={toggleDrawer(true)}
-              className="md:hidden"
-              size="large"
-            >
+      <AppBar position="sticky" sx={{ backgroundColor: darkMode ? '#0a2540' : '#4CAF50', zIndex: theme.zIndex.drawer + 1 }}>
+        <Toolbar className="px-4 py-2 flex justify-between items-center w-full">
+          {/* Left: Logo + Hamburger */}
+          <Box className="flex items-center gap-3">
+            <IconButton edge="start" color="inherit" onClick={toggleDrawer(true)} className="md:hidden" size="large">
               <MenuIcon />
             </IconButton>
             <Typography
@@ -70,28 +97,32 @@ export default function Navbar({ darkMode, toggleDarkMode }) {
             </Typography>
           </Box>
 
-          {/* Search */}
-          <Box className="hidden sm:flex flex-grow max-w-sm ml-6">
-            <Search className="w-full">
-              <SearchIconWrapper>
-                <SearchIcon fontSize="small" />
-              </SearchIconWrapper>
-              <StyledInputBase placeholder="Search..." inputProps={{ 'aria-label': 'search' }} />
-            </Search>
+          {/* Center: Search Bar */}
+          <Box className="hidden sm:flex justify-center flex-grow max-w-md mx-auto">
+            <Box className="w-full max-w-md">
+              <Search className="w-full">
+                <SearchIconWrapper>
+                  <SearchIcon fontSize="small" />
+                </SearchIconWrapper>
+                <StyledInputBase placeholder="Search..." inputProps={{ 'aria-label': 'search' }} />
+              </Search>
+            </Box>
           </Box>
 
-          {/* Right */}
+          {/* Right: Icons */}
           <Box className="flex items-center gap-3">
             <IconButton color="inherit">
               <Badge badgeContent={3} color="error">
                 <NotificationsIcon />
               </Badge>
             </IconButton>
+
             <Tooltip title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}>
-              <IconButton onClick={toggleDarkMode} color="inherit">
+              <IconButton color="inherit" onClick={toggleDarkMode}>
                 {darkMode ? <LightMode /> : <DarkMode />}
               </IconButton>
             </Tooltip>
+
             <IconButton onClick={handleMenuOpen} color="inherit">
               <Avatar sx={{ width: 32, height: 32 }}>
                 <AccountCircle />
@@ -101,10 +132,12 @@ export default function Navbar({ darkMode, toggleDarkMode }) {
         </Toolbar>
       </AppBar>
 
+      {/* Drawer */}
       <Drawer anchor="left" open={drawerOpen} onClose={toggleDrawer(false)}>
         {drawerContent}
       </Drawer>
 
+      {/* Avatar Dropdown Menu */}
       <Menu
         anchorEl={anchorEl}
         open={isMenuOpen}
