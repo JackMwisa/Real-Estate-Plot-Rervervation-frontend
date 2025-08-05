@@ -36,7 +36,7 @@ function App() {
 
       <Navbar />
 
-      <h1>{DisplayApples(9)}</h1>
+      <h1>{DisplayApples(-9)}</h1>
 
     </>
   )
