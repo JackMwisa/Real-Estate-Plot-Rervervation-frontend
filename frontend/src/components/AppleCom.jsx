@@ -1,10 +1,13 @@
 import React, { useState } from 'react'
 import { Link } from 'react-router-dom';
+import Button from '@mui/material/Button';
 
+import Stack from '@mui/material/Stack';
 
 const AppleCom = () => {
 
     const [numberOfApples, setNumberOfApples] = useState(0);
+    const [btnColor, setBtnColor] = useState('error');
 
     const DisplayApples = (numberOfApples) => {
         if (numberOfApples === 0) {
@@ -46,8 +49,8 @@ const AppleCom = () => {
 
 
             <h1>Number of apples: {numberOfApples}</h1>
-            <button onClick={incrementApples} style={{ backgroundColor: 'green', color: 'white', padding: '10px', border: 'none', borderRadius: '5px', display: numberOfApples < 10 ? 'inline-block' : 'none' }}>Add Apple</button>
-            <button onClick={decrementApples} style={{ backgroundColor: 'red', color: 'white', padding: '10px', border: 'none', borderRadius: '5px', display: numberOfApples > 0 ? 'inline-block' : 'none' }}>Remove Apple</button>
+            <Button variant="contained" color={btnColor} size="" onClick={() => {incrementApples(); setBtnColor('success')}} style={{display: numberOfApples < 10 ? 'inline-block' : 'none' }}>Add Apple</Button>
+            <Button variant="contained" color='error' size="" onClick={decrementApples} style={{display: numberOfApples > 0 ? 'inline-block' : 'none' }}>Remove Apple</Button>
 
             {TooManyApples()}
 
@@ -55,6 +58,11 @@ const AppleCom = () => {
 
 
             {/* <a href="/fruits">Go to Fruits</a> */}
+
+
+
+
+
 
         </>
     )
