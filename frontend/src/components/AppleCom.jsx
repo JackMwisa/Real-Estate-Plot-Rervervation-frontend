@@ -41,12 +41,12 @@
  
 
         <h1>Number of apples: {numberOfApples}</h1>
-      <button onClick={incrementApples} style={{backgroundColor: 'green', color: 'white', padding: '10px', border: 'none', borderRadius: '5px'}}>Add Apple</button>
-      <button onClick={decrementApples} style={{backgroundColor: 'red', color: 'white', padding: '10px', border: 'none', borderRadius: '5px'}}>Remove Apple</button>
+      <button onClick={incrementApples} style={{backgroundColor: 'green', color: 'white', padding: '10px', border: 'none', borderRadius: '5px', display: numberOfApples < 10 ? 'inline-block' : 'none'}}>Add Apple</button>
+      <button onClick={decrementApples} style={{backgroundColor: 'red', color: 'white', padding: '10px', border: 'none', borderRadius: '5px', display: numberOfApples > 0 ? 'inline-block' : 'none'}}>Remove Apple</button>
 
         {TooManyApples()} 
 
-        {numberOfApples > 10 ? <h1>I have too many apples</h1> : null}
+        {numberOfApples > 9 ? <h1>I have too many apples</h1> : null}
      </>
    )
  }
