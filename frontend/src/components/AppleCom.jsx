@@ -18,7 +18,13 @@
      <>
 
       <h1>{DisplayApples(numberOfApples)}</h1>
-     
+
+
+      <button onClick={() => setNumberOfApples(numberOfApples + 1)
+      } style={{backgroundColor: 'green', color: 'white', padding: '10px', border: 'none', borderRadius: '5px'}}>Add Apple</button>
+      <button onClick={() => setNumberOfApples(numberOfApples - 1)
+      } style={{backgroundColor: 'red', color: 'white', padding: '10px', border: 'none', borderRadius: '5px'}}>Remove Apple</button>
+
      </>
    )
  }
