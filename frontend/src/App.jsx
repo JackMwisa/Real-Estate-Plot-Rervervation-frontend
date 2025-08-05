@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
+
 import Navbar from './Components/Navbar/Navbar';
 import Home from './pages/Home';
 import Listings from './pages/Listings';
@@ -15,10 +16,10 @@ function App() {
     palette: {
       mode: darkMode ? 'dark' : 'light',
       primary: {
-        main: '#0a2540', // dark blue
+        main: darkMode ? '#0a2540' : '#4CAF50',
       },
-      secondary: {
-        main: '#4CAF50', // green for add button
+      background: {
+        default: darkMode ? '#0a2540' : '#f0fff4',
       },
     },
   });
