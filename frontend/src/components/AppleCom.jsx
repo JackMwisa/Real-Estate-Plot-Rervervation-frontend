@@ -14,16 +14,26 @@
         return `${numberOfApples} apples`;
     }
 
+    const incrementApples = () => {
+        setNumberOfApples(numberOfApples + 1);
+    }
+
+    const decrementApples = () => {
+        setNumberOfApples(numberOfApples - 1);
+        if (numberOfApples < 1) {
+            setNumberOfApples(0);
+        }
+    }
+
+    
    return (
      <>
 
       <h1>{DisplayApples(numberOfApples)}</h1>
 
 
-      <button onClick={() => setNumberOfApples(numberOfApples + 1)
-      } style={{backgroundColor: 'green', color: 'white', padding: '10px', border: 'none', borderRadius: '5px'}}>Add Apple</button>
-      <button onClick={() => setNumberOfApples(numberOfApples - 1)
-      } style={{backgroundColor: 'red', color: 'white', padding: '10px', border: 'none', borderRadius: '5px'}}>Remove Apple</button>
+      <button onClick={incrementApples} style={{backgroundColor: 'green', color: 'white', padding: '10px', border: 'none', borderRadius: '5px'}}>Add Apple</button>
+      <button onClick={decrementApples} style={{backgroundColor: 'red', color: 'white', padding: '10px', border: 'none', borderRadius: '5px'}}>Remove Apple</button>
 
      </>
    )
