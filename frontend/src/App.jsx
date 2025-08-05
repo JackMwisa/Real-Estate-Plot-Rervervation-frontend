@@ -4,6 +4,7 @@ import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 
 import Navbar from './Components/Navbar/Navbar';
+import Footer from './Components/Footer/Footer';
 import Home from './pages/Home';
 import Listings from './pages/Listings';
 import Agencies from './pages/Agencies';
@@ -35,6 +36,7 @@ function App() {
           <Route path="/agencies" element={<Agencies />} />
           <Route path="/add-property" element={<AddProperty />} />
         </Routes>
+        <Footer darkMode={darkMode} />
       </BrowserRouter>
     </ThemeProvider>
   );

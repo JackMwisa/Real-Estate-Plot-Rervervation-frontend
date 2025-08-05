@@ -1,6 +1,16 @@
 import React, { useState } from 'react';
+import {
+  Box,
+  TextField,
+  Typography,
+  Button,
+  useTheme,
+  Paper,
+} from '@mui/material';
 
-const AddProperty = () => {
+export default function AddProperty() {
+  const theme = useTheme();
+
   const [form, setForm] = useState({
     title: '',
     location: '',
@@ -8,89 +18,134 @@ const AddProperty = () => {
     description: '',
   });
 
+  const [errors, setErrors] = useState({});
+
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const validate = () => {
+    const newErrors = {};
+    if (!form.title.trim()) newErrors.title = 'Title is required';
+    if (!form.location.trim()) newErrors.location = 'Location is required';
+    if (!form.price || form.price <= 0) newErrors.price = 'Enter a valid price';
+    if (!form.description.trim()) newErrors.description = 'Description is required';
+    return newErrors;
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log('Property submitted:', form);
+    const validationErrors = validate();
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      return;
+    }
+
+    setErrors({});
+    console.log('✅ Property Submitted:', form);
     // TODO: Send to backend/API
+
+    // Clear form
+    setForm({
+      title: '',
+      location: '',
+      price: '',
+      description: '',
+    });
   };
 
   return (
-    <div className="p-4 max-w-2xl mx-auto">
-      <h1 className="text-2xl font-semibold mb-6 text-gray-900 dark:text-white">Add New Property</h1>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-            Property Title
-          </label>
-          <input
-            type="text"
+    <Box
+      sx={{
+        maxWidth: 600,
+        mx: 'auto',
+        mt: 4,
+        px: 3,
+        py: 4,
+      }}
+    >
+      <Paper
+        elevation={3}
+        sx={{
+          p: 4,
+          backgroundColor: theme.palette.mode === 'dark' ? '#1e293b' : '#fff',
+        }}
+      >
+        <Typography variant="h5" fontWeight="bold" mb={3}>
+          Add New Property
+        </Typography>
+
+        <form onSubmit={handleSubmit} noValidate>
+          <TextField
+            label="Property Title"
             name="title"
-            id="title"
+            fullWidth
+            required
+            margin="normal"
             value={form.title}
             onChange={handleChange}
-            required
-            className="mt-1 block w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none text-gray-900 dark:text-white"
+            error={Boolean(errors.title)}
+            helperText={errors.title}
           />
-        </div>
 
-        <div>
-          <label htmlFor="location" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-            Location
-          </label>
-          <input
-            type="text"
+          <TextField
+            label="Location"
             name="location"
-            id="location"
+            fullWidth
+            required
+            margin="normal"
             value={form.location}
             onChange={handleChange}
-            required
-            className="mt-1 block w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none text-gray-900 dark:text-white"
+            error={Boolean(errors.location)}
+            helperText={errors.location}
           />
-        </div>
 
-        <div>
-          <label htmlFor="price" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-            Price (USD)
-          </label>
-          <input
-            type="number"
+          <TextField
+            label="Price (USD)"
             name="price"
-            id="price"
+            type="number"
+            fullWidth
+            required
+            margin="normal"
             value={form.price}
             onChange={handleChange}
-            required
-            className="mt-1 block w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none text-gray-900 dark:text-white"
+            error={Boolean(errors.price)}
+            helperText={errors.price}
+            inputProps={{ min: 0 }}
           />
-        </div>
 
-        <div>
-          <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-            Description
-          </label>
-          <textarea
+          <TextField
+            label="Description"
             name="description"
-            id="description"
+            multiline
+            rows={4}
+            fullWidth
+            required
+            margin="normal"
             value={form.description}
             onChange={handleChange}
-            required
-            rows="4"
-            className="mt-1 block w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none text-gray-900 dark:text-white"
-          ></textarea>
-        </div>
+            error={Boolean(errors.description)}
+            helperText={errors.description}
+          />
 
-        <button
-          type="submit"
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded transition shadow-sm"
-        >
-          Submit Property
-        </button>
-      </form>
-    </div>
+          <Button
+            type="submit"
+            fullWidth
+            variant="contained"
+            sx={{
+              mt: 3,
+              py: 1.5,
+              backgroundColor: theme.palette.mode === 'dark' ? '#0ea5e9' : '#1976d2',
+              '&:hover': {
+                backgroundColor: theme.palette.mode === 'dark' ? '#0284c7' : '#1565c0',
+              },
+            }}
+          >
+            Submit Property
+          </Button>
+        </form>
+      </Paper>
+    </Box>
   );
-};
-
-export default AddProperty;
+}
