@@ -3,8 +3,9 @@ import React from 'react'
 const Fruits = (props) => {
   return (
     <>
-    Fruits: {props.color} {props.name === "Apple" ? "🍎" : "🍏"}
-    <p>Fruits are healthy and delicious!</p>
+    {/* Fruits: {props.color} {props.name === "Apple" ? "🍎" : "🍏"} */}
+    <h1>{props.name} is {props.color}</h1>
+ 
     </>
   )
 }
