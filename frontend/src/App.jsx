@@ -1,42 +1,26 @@
 import { useState } from 'react'
 import './App.css'
 import Navbar from './components/Navbar.jsx'
+import AppleCom from './components/AppleCom.jsx';
+import Fruits from './components/Fruits.jsx';
 
 function App() {
 
-  function myFunction() {
-    alert('Hello World');
-  }
-
-  const myComponent = () => {
-    return <h1>This is a component</h1>;
-  }
-
-  const DisplayApples = (n) => {
-    if (n === 0) {
-      return 'No apples';
-    }
-    if (n === 1) {
-      return 'One apple';
-    }
-    return `${n} apples`;
-  }
 
   return (
     <>
-      <h1>This is an h1</h1>
-      <p>this is is a paragraph</p>
-      {myComponent()}
-      <button onClick={myFunction}>Click me</button>
-
-      <myComponent />
-      <myComponent />
-
-      {myComponent()}
+      <h1>UG Real Estate</h1>
+      <h2>Plot Reservation System</h2>
+      <h3>Welcome to the Plot Reservation System</h3>
+      {/* <h4>Reserve your plot today!</h4>
+      <h5>Contact us for more information</h5>
+      <h6>Thank you for visiting</h6> */}
 
       <Navbar />
-
-      <h1>{DisplayApples(-9)}</h1>
+      <AppleCom />
+      <Fruits name="Apple" color="red" />
+      <Fruits name="Green Apple" color="green" />
+      {/* <TestComponent /> */}
 
     </>
   )
