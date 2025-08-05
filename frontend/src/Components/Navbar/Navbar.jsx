@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import {
   AppBar, Box, Toolbar, IconButton, Typography, Drawer, List,
   ListItem, ListItemText, Divider, Avatar, Badge, Menu, MenuItem,
-  Tooltip, useTheme
+  Tooltip, useTheme, Button
 } from '@mui/material';
 
 import {
@@ -81,36 +81,78 @@ export default function Navbar({ darkMode, toggleDarkMode }) {
 
   return (
     <>
-      <AppBar position="sticky" sx={{ backgroundColor: darkMode ? '#0a2540' : '#4CAF50', zIndex: theme.zIndex.drawer + 1 }}>
-        <Toolbar className="px-4 py-2 flex justify-between items-center w-full">
-          {/* Left: Logo + Hamburger */}
-          <Box className="flex items-center gap-3">
-            <IconButton edge="start" color="inherit" onClick={toggleDrawer(true)} className="md:hidden" size="large">
+      <AppBar
+        position="sticky"
+        sx={{
+          backgroundColor: darkMode ? '#0a2540' : '#4CAF50',
+          zIndex: theme.zIndex.drawer + 1,
+        }}
+      >
+        <Toolbar
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            gap: 2,
+            px: 2,
+          }}
+        >
+          {/* Left: Logo & Drawer */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <IconButton
+              edge="start"
+              color="inherit"
+              onClick={toggleDrawer(true)}
+              sx={{ display: { xs: 'block', md: 'none' } }}
+            >
               <MenuIcon />
             </IconButton>
             <Typography
               component={Link}
               to="/"
-              className="no-underline text-white font-bold text-xl"
+              sx={{
+                color: '#fff',
+                fontWeight: 'bold',
+                fontSize: '1.25rem',
+                textDecoration: 'none',
+              }}
             >
               RealEstate
             </Typography>
-          </Box>
 
-          {/* Center: Search Bar */}
-          <Box className="hidden sm:flex justify-center flex-grow max-w-md mx-auto">
-            <Box className="w-full max-w-md">
-              <Search className="w-full">
-                <SearchIconWrapper>
-                  <SearchIcon fontSize="small" />
-                </SearchIconWrapper>
-                <StyledInputBase placeholder="Search..." inputProps={{ 'aria-label': 'search' }} />
-              </Search>
+            {/* Desktop Menu Links */}
+            <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: 2, ml: 2 }}>
+              {menuLinks.map((item) => (
+                <Button
+                  key={item.label}
+                  component={Link}
+                  to={item.path}
+                  sx={{
+                    color: '#fff',
+                    fontWeight: 600,
+                    textTransform: 'none',
+                    '&:hover': {
+                      backgroundColor: 'rgba(255,255,255,0.1)',
+                    },
+                  }}
+                >
+                  {item.label}
+                </Button>
+              ))}
             </Box>
           </Box>
 
+          {/* Center: Search */}
+          <Box sx={{ flex: 1, maxWidth: 400, display: { xs: 'none', sm: 'flex' } }}>
+            <Search sx={{ width: '100%' }}>
+              <SearchIconWrapper>
+                <SearchIcon fontSize="small" />
+              </SearchIconWrapper>
+              <StyledInputBase placeholder="Search…" inputProps={{ 'aria-label': 'search' }} />
+            </Search>
+          </Box>
+
           {/* Right: Icons */}
-          <Box className="flex items-center gap-3">
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
             <IconButton color="inherit">
               <Badge badgeContent={3} color="error">
                 <NotificationsIcon />
@@ -132,12 +174,12 @@ export default function Navbar({ darkMode, toggleDarkMode }) {
         </Toolbar>
       </AppBar>
 
-      {/* Drawer */}
+      {/* Drawer for mobile */}
       <Drawer anchor="left" open={drawerOpen} onClose={toggleDrawer(false)}>
         {drawerContent}
       </Drawer>
 
-      {/* Avatar Dropdown Menu */}
+      {/* User menu */}
       <Menu
         anchorEl={anchorEl}
         open={isMenuOpen}
