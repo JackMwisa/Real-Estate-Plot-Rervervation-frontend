@@ -1,21 +1,23 @@
- import React from 'react'
+ import React, {useState} from 'react'
  
  const AppleCom = () => {
 
-    const DisplayApples = (n) => {
-        if (n === 0) {
+    const [numberOfApples, setNumberOfApples] = useState(0);
+
+    const DisplayApples = (numberOfApples) => {
+        if (numberOfApples === 0) {
         return 'No apples';
         }
-        if (n === 1) {
+        if (numberOfApples === 1) {
         return 'One apple';
         }
-        return `${n} apples`;
+        return `${numberOfApples} apples`;
     }
 
    return (
      <>
 
-      <h1>{DisplayApples(-9)}</h1>
+      <h1>{DisplayApples(numberOfApples)}</h1>
      
      </>
    )

@@ -41,14 +41,16 @@ function App() {
       {/* <TestComponent /> */}
 
 
-      {theFruits.map(
+      {/* {theFruits.map(
         (fruit) => (
           <>
           <h5 key={fruit.id}>{fruit.name} is {fruit.color}</h5>
           <Fruits key={fruit.id} name={fruit.name} color={fruit.color} />
         </>
         )
-      )}
+      )} */}
+
+      <AppleCom />
 
     </>
   )
