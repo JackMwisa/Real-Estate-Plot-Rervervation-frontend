@@ -25,16 +25,28 @@
         }
     }
 
-    
+
+    const TooManyApples = () => {
+        if (numberOfApples > 10) {
+            return <h1>I have too many apples</h1>;
+        }
+        return null;
+    }
+
    return (
      <>
 
-      <h1>{DisplayApples(numberOfApples)}</h1>
+    
 
+ 
 
+        <h1>Number of apples: {numberOfApples}</h1>
       <button onClick={incrementApples} style={{backgroundColor: 'green', color: 'white', padding: '10px', border: 'none', borderRadius: '5px'}}>Add Apple</button>
       <button onClick={decrementApples} style={{backgroundColor: 'red', color: 'white', padding: '10px', border: 'none', borderRadius: '5px'}}>Remove Apple</button>
 
+        {TooManyApples()} 
+
+        {numberOfApples > 10 ? <h1>I have too many apples</h1> : null}
      </>
    )
  }
