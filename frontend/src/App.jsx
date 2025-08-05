@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import './App.css'
-import Navbar from './components/Navbar.jsx'
-import AppleCom from './components/AppleCom.jsx';
-import Fruits from './components/Fruits.jsx';
+import Navbar from './Components/Navbar.jsx'
+import AppleCom from './Components/AppleCom.jsx';
+import Fruits from './Components/Fruits.jsx';
 
  
 
@@ -23,9 +23,6 @@ function App() {
         <Route path="/navbar" element={<Navbar />} />
       </Routes>
     </BrowserRouter>
-
-
-
 
     </>
   )
