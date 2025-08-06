@@ -1,182 +1,219 @@
 import React, { useState } from 'react';
 import {
-  Box,
-  TextField,
-  Typography,
-  Button,
-  useTheme,
-  Paper,
-  Fade,
-  Divider,
+    Box,
+    TextField,
+    Typography,
+    Button,
+    useTheme,
+    Paper,
+    MenuItem,
+    Snackbar,
+    Alert,
+    InputLabel,
+    FormControl,
+    Select,
 } from '@mui/material';
 
+const propertyTypes = ['Apartment', 'House', 'Land', 'Commercial', 'Other'];
+
 export default function AddProperty() {
-  const theme = useTheme();
+    const theme = useTheme();
 
-  const [form, setForm] = useState({
-    title: '',
-    location: '',
-    price: '',
-    description: '',
-  });
-
-  const [errors, setErrors] = useState({});
-  const [submitted, setSubmitted] = useState(false);
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const validate = () => {
-    const newErrors = {};
-    if (!form.title.trim()) newErrors.title = 'Title is required';
-    if (!form.location.trim()) newErrors.location = 'Location is required';
-    if (!form.price || form.price <= 0) newErrors.price = 'Enter a valid price';
-    if (!form.description.trim()) newErrors.description = 'Description is required';
-    return newErrors;
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const validationErrors = validate();
-    if (Object.keys(validationErrors).length > 0) {
-      setErrors(validationErrors);
-      return;
-    }
-
-    setErrors({});
-    console.log('✅ Property Submitted:', form);
-
-    // Clear form and show feedback
-    setSubmitted(true);
-    setForm({
-      title: '',
-      location: '',
-      price: '',
-      description: '',
+    const [form, setForm] = useState({
+        title: '',
+        location: '',
+        price: '',
+        description: '',
+        type: '',
+        image: null,
     });
 
-    setTimeout(() => setSubmitted(false), 2000); // Reset submission feedback
-  };
+    const [imagePreview, setImagePreview] = useState(null);
+    const [errors, setErrors] = useState({});
+    const [snackbarOpen, setSnackbarOpen] = useState(false);
 
-  return (
-    <Fade in>
-      <Box
-        sx={{
-          maxWidth: 700,
-          mx: 'auto',
-          mt: 6,
-          px: { xs: 2, sm: 4 },
-          pb: 6,
-        }}
-      >
-        <Paper
-          elevation={3}
-          sx={{
-            p: { xs: 3, sm: 5 },
-            backgroundColor:
-              theme.palette.mode === 'dark' ? '#1e293b' : '#ffffff',
-            borderRadius: 3,
-          }}
-        >
-          <Typography variant="h5" fontWeight={600} mb={1}>
-            Add New Property
-          </Typography>
-          <Typography
-            variant="body2"
-            color="text.secondary"
-            mb={3}
-          >
-            Fill in the details below to list a property.
-          </Typography>
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setForm((prev) => ({ ...prev, [name]: value }));
+    };
 
-          <Divider sx={{ mb: 3 }} />
+    const handleImageUpload = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setForm((prev) => ({ ...prev, image: file }));
+            const reader = new FileReader();
+            reader.onloadend = () => setImagePreview(reader.result);
+            reader.readAsDataURL(file);
+        }
+    };
 
-          <form onSubmit={handleSubmit} noValidate>
-            <TextField
-              label="Property Title"
-              name="title"
-              fullWidth
-              required
-              margin="normal"
-              value={form.title}
-              onChange={handleChange}
-              error={Boolean(errors.title)}
-              helperText={errors.title}
-            />
+    const validate = () => {
+        const newErrors = {};
+        if (!form.title.trim()) newErrors.title = 'Title is required';
+        if (!form.location.trim()) newErrors.location = 'Location is required';
+        if (!form.price || form.price <= 0) newErrors.price = 'Enter a valid price';
+        if (!form.description.trim()) newErrors.description = 'Description is required';
+        if (!form.type) newErrors.type = 'Select a property type';
+        return newErrors;
+    };
 
-            <TextField
-              label="Location"
-              name="location"
-              fullWidth
-              required
-              margin="normal"
-              value={form.location}
-              onChange={handleChange}
-              error={Boolean(errors.location)}
-              helperText={errors.location}
-            />
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        const validationErrors = validate();
+        if (Object.keys(validationErrors).length > 0) {
+            setErrors(validationErrors);
+            return;
+        }
 
-            <TextField
-              label="Price (USD)"
-              name="price"
-              type="number"
-              fullWidth
-              required
-              margin="normal"
-              value={form.price}
-              onChange={handleChange}
-              error={Boolean(errors.price)}
-              helperText={errors.price}
-              inputProps={{ min: 0 }}
-            />
+        setErrors({});
+        console.log('✅ Property Submitted:', form);
+        setSnackbarOpen(true);
 
-            <TextField
-              label="Description"
-              name="description"
-              multiline
-              rows={4}
-              fullWidth
-              required
-              margin="normal"
-              value={form.description}
-              onChange={handleChange}
-              error={Boolean(errors.description)}
-              helperText={errors.description}
-            />
+        // Clear form
+        setForm({
+            title: '',
+            location: '',
+            price: '',
+            description: '',
+            type: '',
+            image: null,
+        });
+        setImagePreview(null);
+    };
 
-            <Button
-              type="submit"
-              fullWidth
-              size="large"
-              variant="contained"
-              sx={{
-                mt: 3,
-                py: 1.5,
-                fontWeight: 600,
-                backgroundColor: theme.palette.mode === 'dark' ? '#0ea5e9' : '#4CAF50',
-                '&:hover': {
-                  backgroundColor: theme.palette.mode === 'dark' ? '#0284c7' : '#43a047',
-                },
-              }}
+    return (
+        <Box sx={{ maxWidth: 700, mx: 'auto', mt: 4, px: 2 }}>
+            <Paper
+                elevation={3}
+                sx={{
+                    p: 4,
+                    backgroundColor: theme.palette.mode === 'dark' ? '#1e293b' : '#fff',
+                }}
             >
-              Submit Property
-            </Button>
+                <Typography variant="h5" fontWeight="bold" mb={3}>
+                    Add New Property
+                </Typography>
 
-            {submitted && (
-              <Typography
-                variant="body2"
-                color="success.main"
-                align="center"
-                mt={2}
-              >
-                ✅ Property submitted successfully!
-              </Typography>
-            )}
-          </form>
-        </Paper>
-      </Box>
-    </Fade>
-  );
+                <form onSubmit={handleSubmit} noValidate>
+                    <TextField
+                        label="Property Title"
+                        name="title"
+                        fullWidth
+                        required
+                        margin="normal"
+                        value={form.title}
+                        onChange={handleChange}
+                        error={Boolean(errors.title)}
+                        helperText={errors.title}
+                    />
+
+                    <FormControl fullWidth required margin="normal" error={Boolean(errors.type)}>
+                        <InputLabel>Property Type</InputLabel>
+                        <Select
+                            name="type"
+                            value={form.type}
+                            label="Property Type"
+                            onChange={handleChange}
+                        >
+                            {propertyTypes.map((type) => (
+                                <MenuItem key={type} value={type}>{type}</MenuItem>
+                            ))}
+                        </Select>
+                        {errors.type && (
+                            <Typography variant="caption" color="error">
+                                {errors.type}
+                            </Typography>
+                        )}
+                    </FormControl>
+
+                    <TextField
+                        label="Location"
+                        name="location"
+                        fullWidth
+                        required
+                        margin="normal"
+                        value={form.location}
+                        onChange={handleChange}
+                        error={Boolean(errors.location)}
+                        helperText={errors.location}
+                    />
+
+                    <TextField
+                        label="Price (USD)"
+                        name="price"
+                        type="number"
+                        fullWidth
+                        required
+                        margin="normal"
+                        value={form.price}
+                        onChange={handleChange}
+                        error={Boolean(errors.price)}
+                        helperText={errors.price}
+                        inputProps={{ min: 0 }}
+                    />
+
+                    <TextField
+                        label="Description"
+                        name="description"
+                        multiline
+                        rows={4}
+                        fullWidth
+                        required
+                        margin="normal"
+                        value={form.description}
+                        onChange={handleChange}
+                        error={Boolean(errors.description)}
+                        helperText={errors.description}
+                    />
+
+                    <Box mt={2}>
+                        <Typography variant="body1" mb={1}>
+                            Upload Image
+                        </Typography>
+                        <input type="file" accept="image/*" onChange={handleImageUpload} />
+                        {imagePreview && (
+                            <Box mt={2}>
+                                <img
+                                    src={imagePreview}
+                                    alt="Preview"
+                                    style={{ maxWidth: '100%', height: 'auto', borderRadius: '8px' }}
+                                />
+                            </Box>
+                        )}
+                    </Box>
+
+                    <Button
+                        type="submit"
+                        fullWidth
+                        variant="contained"
+                        sx={{
+                            mt: 4,
+                            py: 1.5,
+                            backgroundColor: theme.palette.mode === 'dark' ? '#0ea5e9' : '#4CAF50',
+                            '&:hover': {
+                                backgroundColor: theme.palette.mode === 'dark' ? '#0284c7' : '#43a047',
+                            },
+                        }}
+                    >
+                        Submit Property
+                    </Button>
+                </form>
+            </Paper>
+
+            <Snackbar
+                open={snackbarOpen}
+                autoHideDuration={4000}
+                onClose={() => setSnackbarOpen(false)}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+            >
+                <Alert severity="success" onClose={() => setSnackbarOpen(false)}>
+                    Property submitted successfully!
+                </Alert>
+            </Snackbar>
+        </Box>
+    );
 }
+
+
+
+
