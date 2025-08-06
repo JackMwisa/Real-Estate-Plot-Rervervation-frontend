@@ -55,6 +55,9 @@ const Listings = () => {
     useEffect(() => {
       setMap(instance);
       setMapLoaded(true);
+      setTimeout(() => {
+        instance.invalidateSize();
+      }, 100);
     }, [instance]);
     return null;
   };
@@ -70,9 +73,23 @@ const Listings = () => {
     ? myListings[0].location.coordinates 
     : [51.505, -0.09];
 
+  // Fix for map not displaying properly on resize
+  useEffect(() => {
+    const handleResize = () => {
+      if (map) {
+        setTimeout(() => {
+          map.invalidateSize();
+        }, 100);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [map]);
+
   return (
     <ListingsContainer container>
-      {/* LEFT: Listings */}
+      {/* LEFT: Listings Sidebar */}
       <ListingsSidebar item xs={12} md={4}>
         <Typography variant="h5" fontWeight="bold" mb={2}>
           Browse Listings
@@ -129,20 +146,16 @@ const Listings = () => {
 
       {/* RIGHT: Map */}
       <ListingsMap item xs={12} md={8}>
-        {mapLoaded || (
-          <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Typography>Loading map...</Typography>
-          </div>
-        )}
-        <div style={{ height: '100%', width: '100%', display: mapLoaded ? 'block' : 'none' }}>
+        <div style={{ height: '100%', width: '100%', position: 'relative' }}>
           <MapContainer
             center={initialCenter}
             zoom={11}
             scrollWheelZoom={true}
-            style={{ height: '100%', width: '100%' }}
+            style={{ height: '100%', width: '100%', minHeight: '400px' }}
             whenCreated={(mapInstance) => {
               setMap(mapInstance);
               setMapLoaded(true);
+              setTimeout(() => mapInstance.invalidateSize(), 100);
             }}
           >
             <MapInstance />
