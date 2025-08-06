@@ -9,6 +9,8 @@ import Home from './pages/Home';
 import Listings from './pages/Listings';
 import Agencies from './pages/Agencies';
 import AddProperty from './pages/AddProperty';
+import Login from './pages/Login';
+import Signup from './pages/Signup';
 
 function App() {
   const [darkMode, setDarkMode] = useState(false);
@@ -35,6 +37,8 @@ function App() {
           <Route path="/listings" element={<Listings />} />
           <Route path="/agencies" element={<Agencies />} />
           <Route path="/add-property" element={<AddProperty />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
         </Routes>
         <Footer darkMode={darkMode} />
       </BrowserRouter>
