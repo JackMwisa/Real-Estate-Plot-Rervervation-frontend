@@ -6,7 +6,7 @@ import CssBaseline from '@mui/material/CssBaseline';
 import Navbar from './Components/Navbar/Navbar';
 import Footer from './Components/Footer/Footer';
 import Home from './pages/Home';
-import Listings from './pages/Listings';
+import Listings from './pages/Listings/Listings';
 import Agencies from './pages/Agencies';
 import AddProperty from './pages/AddProperty';
 import Login from './pages/Login';
