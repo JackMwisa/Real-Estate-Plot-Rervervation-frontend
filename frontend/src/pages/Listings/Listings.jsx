@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   MapContainer,
   TileLayer,
@@ -12,6 +12,14 @@ import 'leaflet/dist/leaflet.css';
 import {
   Typography,
   Button,
+  Box,
+  useMediaQuery,
+  useTheme,
+  CircularProgress,
+  Card,
+  CardMedia,
+  CardContent,
+  IconButton,
 } from '@mui/material';
 import RoomIcon from '@mui/icons-material/Room';
 
@@ -23,17 +31,6 @@ import officeIconPng from '../../assets/Mapicons/office.png';
 // Data
 import myListings from '../../assets/Data/Dummydata';
 
-// Styled Components
-import {
-  ListingsContainer,
-  ListingsSidebar,
-  ListingsMap,
-  ListingCard,
-  ListingMedia,
-  ListingContent,
-  FlyToIcon,
-} from './ListingsStyles';
-
 const iconMap = {
   House: new Icon({ iconUrl: houseIconPng, iconSize: [35, 35] }),
   Apartment: new Icon({ iconUrl: apartmentIconPng, iconSize: [35, 35] }),
@@ -41,30 +38,37 @@ const iconMap = {
 };
 
 const Listings = () => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [view, setView] = useState('standard');
-  const [map, setMap] = useState(null);
-  const [mapLoaded, setMapLoaded] = useState(false);
+  const mapRef = useRef(null);
+  const [loading, setLoading] = useState(true);
 
   const baseLayers = {
     standard: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
     satellite: "https://tiles.stadiamaps.com/tiles/alidade_satellite/{z}/{x}/{y}{r}.png",
   };
 
-  const MapInstance = () => {
-    const instance = useMap();
+  const MapController = () => {
+    const map = useMap();
+    
     useEffect(() => {
-      setMap(instance);
-      setMapLoaded(true);
+      mapRef.current = map;
       setTimeout(() => {
-        instance.invalidateSize();
+        map.invalidateSize();
       }, 100);
-    }, [instance]);
+      
+      return () => {
+        mapRef.current = null;
+      };
+    }, [map]);
+
     return null;
   };
 
   const handleFlyTo = (coordinates) => {
-    if (map) {
-      map.flyTo(coordinates, 15);
+    if (mapRef.current) {
+      mapRef.current.flyTo(coordinates, 15);
     }
   };
 
@@ -73,29 +77,58 @@ const Listings = () => {
     ? myListings[0].location.coordinates 
     : [51.505, -0.09];
 
-  // Fix for map not displaying properly on resize
+  // Handle window resize
   useEffect(() => {
     const handleResize = () => {
-      if (map) {
+      if (mapRef.current) {
         setTimeout(() => {
-          map.invalidateSize();
+          mapRef.current.invalidateSize();
         }, 100);
       }
     };
 
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, [map]);
+  }, []);
+
+  // Simulate data loading
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setLoading(false);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
-    <ListingsContainer container>
-      {/* LEFT: Listings Sidebar */}
-      <ListingsSidebar item xs={12} md={4}>
+    <Box sx={{ 
+      display: 'flex', 
+      flexDirection: isMobile ? 'column-reverse' : 'row', 
+      height: '100vh',
+      width: '100vw',
+      overflow: 'hidden'
+    }}>
+      {/* Listings Sidebar */}
+      <Box sx={{
+        width: isMobile ? '100%' : '40%',
+        height: isMobile ? '40%' : '100%',
+        overflowY: 'auto',
+        padding: 2,
+        backgroundColor: theme.palette.grey[100],
+        borderRight: isMobile ? 'none' : `1px solid ${theme.palette.divider}`,
+      }}>
         <Typography variant="h5" fontWeight="bold" mb={2}>
           Browse Listings
         </Typography>
 
-        <div style={{ marginBottom: '1rem' }}>
+        <Box sx={{ marginBottom: '1rem' }}>
           <Button
             onClick={() => setView('standard')}
             variant={view === 'standard' ? 'contained' : 'outlined'}
@@ -109,58 +142,91 @@ const Listings = () => {
           >
             Satellite View
           </Button>
-        </div>
+        </Box>
 
-        {myListings.map((listing) => (
-          <ListingCard key={listing.id}>
-            <ListingMedia
-              component="img"
-              image={listing.picture1}
-              alt={listing.title}
-              onClick={() => handleFlyTo(listing.location.coordinates)}
-            />
-            <ListingContent>
-              <Typography variant="h6">{listing.title}</Typography>
-              <Typography variant="body2" color="text.secondary">
-                {listing.description.substring(0, 100)}...
-              </Typography>
-              <Typography
-                variant="subtitle1"
-                color="green"
-                fontWeight="bold"
-                mt={1}
+        <Box sx={{ overflowY: 'auto', height: isMobile ? 'calc(100% - 100px)' : 'calc(100% - 100px)' }}>
+          {myListings.map((listing) => (
+            <Card key={listing.id} sx={{ 
+              marginBottom: 2,
+              position: 'relative',
+              transition: 'transform 0.2s',
+              '&:hover': {
+                transform: 'scale(1.01)',
+                boxShadow: theme.shadows[4],
+              },
+            }}>
+              <CardMedia
+                component="img"
+                height="160"
+                image={listing.picture1}
+                alt={listing.title}
+                onClick={() => handleFlyTo(listing.location.coordinates)}
+                sx={{ cursor: 'pointer', objectFit: 'cover' }}
+              />
+              <CardContent>
+                <Typography variant="h6">{listing.title}</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {listing.description.substring(0, 100)}...
+                </Typography>
+                <Typography
+                  variant="subtitle1"
+                  color="green"
+                  fontWeight="bold"
+                  mt={1}
+                >
+                  {listing.property_status === 'Rent'
+                    ? `$${listing.price} / ${listing.rental_frequency}`
+                    : `$${listing.price.toLocaleString()}`}
+                </Typography>
+              </CardContent>
+              <IconButton
+                sx={{
+                  position: 'absolute',
+                  top: 8,
+                  right: 8,
+                  background: '#fff',
+                  zIndex: 1,
+                  '&:hover': {
+                    background: theme.palette.grey[200],
+                  },
+                }}
+                onClick={() => handleFlyTo(listing.location.coordinates)}
               >
-                {listing.property_status === 'Rent'
-                  ? `$${listing.price} / ${listing.rental_frequency}`
-                  : `$${listing.price.toLocaleString()}`}
-              </Typography>
-            </ListingContent>
-            <FlyToIcon
-              onClick={() => handleFlyTo(listing.location.coordinates)}
-            >
-              <RoomIcon color="primary" />
-            </FlyToIcon>
-          </ListingCard>
-        ))}
-      </ListingsSidebar>
+                <RoomIcon color="primary" />
+              </IconButton>
+            </Card>
+          ))}
+        </Box>
+      </Box>
 
-      {/* RIGHT: Map */}
-      <ListingsMap item xs={12} md={8}>
-        <div style={{ height: '100%', width: '100%', position: 'relative' }}>
+      {/* Map Container */}
+      <Box sx={{
+        width: isMobile ? '100%' : '60%',
+        height: isMobile ? '60%' : '100%',
+        position: 'relative',
+      }}>
+        <Box sx={{ 
+          height: '100%', 
+          width: '100%',
+          position: 'relative',
+        }}>
           <MapContainer
             center={initialCenter}
-            zoom={11}
+            zoom={13}
             scrollWheelZoom={true}
-            style={{ height: '100%', width: '100%', minHeight: '400px' }}
-            whenCreated={(mapInstance) => {
-              setMap(mapInstance);
-              setMapLoaded(true);
-              setTimeout(() => mapInstance.invalidateSize(), 100);
+            style={{ 
+              height: '100%', 
+              width: '100%',
+              zIndex: 1,
+            }}
+            whenCreated={(map) => {
+              mapRef.current = map;
+              setTimeout(() => map.invalidateSize(), 100);
             }}
           >
-            <MapInstance />
+            <MapController />
             <TileLayer
-              attribution='&copy; OpenStreetMap contributors'
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
               url={baseLayers[view]}
             />
             {myListings.map((listing) => (
@@ -195,9 +261,9 @@ const Listings = () => {
               </Marker>
             ))}
           </MapContainer>
-        </div>
-      </ListingsMap>
-    </ListingsContainer>
+        </Box>
+      </Box>
+    </Box>
   );
 };
 
