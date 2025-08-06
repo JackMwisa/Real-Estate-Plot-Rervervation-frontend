@@ -1,4 +1,4 @@
-import { styled, alpha } from '@mui/material/styles';
+import { alpha, styled } from '@mui/material/styles';
 import InputBase from '@mui/material/InputBase';
 
 export const Search = styled('div')(({ theme }) => ({
@@ -10,10 +10,6 @@ export const Search = styled('div')(({ theme }) => ({
   },
   marginLeft: 0,
   width: '100%',
-  [theme.breakpoints.up('sm')]: {
-    marginLeft: theme.spacing(1),
-    width: '100%',
-  },
 }));
 
 export const SearchIconWrapper = styled('div')(({ theme }) => ({
@@ -29,13 +25,6 @@ export const SearchIconWrapper = styled('div')(({ theme }) => ({
 export const StyledInputBase = styled(InputBase)(({ theme }) => ({
   color: 'inherit',
   width: '100%',
-  '& .MuiInputBase-input': {
-    padding: theme.spacing(1.2, 1.2, 1.2, 0),
-    paddingLeft: `calc(1em + ${theme.spacing(4)})`,
-    transition: theme.transitions.create('width'),
-    width: '100%',
-    [theme.breakpoints.up('md')]: {
-      width: '100%',
-    },
-  },
+  paddingLeft: `calc(1em + ${theme.spacing(4)})`,
+  transition: theme.transitions.create('width'),
 }));

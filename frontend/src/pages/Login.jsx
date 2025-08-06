@@ -1,55 +1,52 @@
 import React, { useState } from 'react';
 import {
-  Box,
-  Button,
-  TextField,
-  Typography,
-  Paper,
-  useTheme,
+  Box, Button, TextField, Typography, Paper, useTheme
 } from '@mui/material';
+import { Link } from 'react-router-dom';
 
-export default function Login() {
+const Login = () => {
   const theme = useTheme();
   const [form, setForm] = useState({ email: '', password: '' });
 
-  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+  const handleChange = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log('Logging in with:', form);
-    // TODO: Send to backend
+    console.log('Logging in:', form);
+    // TODO: handle authentication
   };
 
   return (
-    <Box sx={{ maxWidth: 400, mx: 'auto', mt: 6, px: 2 }}>
-      <Paper sx={{ p: 4 }} elevation={3}>
-        <Typography variant="h5" mb={2} fontWeight="bold">Login</Typography>
+    <Box sx={{ maxWidth: 400, mx: 'auto', mt: 6, px: 3 }}>
+      <Paper elevation={3} sx={{ p: 4, backgroundColor: theme.palette.background.paper }}>
+        <Typography variant="h5" fontWeight="bold" mb={2}>Login</Typography>
+
         <form onSubmit={handleSubmit}>
           <TextField
-            label="Email"
-            name="email"
-            fullWidth
-            margin="normal"
-            type="email"
-            required
-            value={form.email}
-            onChange={handleChange}
+            fullWidth margin="normal" required
+            label="Email" name="email" type="email"
+            value={form.email} onChange={handleChange}
           />
           <TextField
-            label="Password"
-            name="password"
-            fullWidth
-            margin="normal"
-            type="password"
-            required
-            value={form.password}
-            onChange={handleChange}
+            fullWidth margin="normal" required
+            label="Password" name="password" type="password"
+            value={form.password} onChange={handleChange}
           />
-          <Button type="submit" variant="contained" fullWidth sx={{ mt: 2 }}>
-            Log In
+          <Button
+            type="submit" variant="contained" fullWidth sx={{ mt: 2 }}
+          >
+            Login
           </Button>
+          <Typography mt={2} textAlign="center" variant="body2">
+            Don’t have an account?{' '}
+            <Link to="/signup" style={{ color: theme.palette.primary.main }}>Sign Up</Link>
+          </Typography>
         </form>
       </Paper>
     </Box>
   );
-}
+};
+
+export default Login;

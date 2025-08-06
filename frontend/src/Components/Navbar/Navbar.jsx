@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  AppBar, Box, Toolbar, IconButton, Typography, Drawer, List,
+  AppBar, Toolbar, IconButton, Typography, Drawer, List,
   ListItem, ListItemText, Divider, Avatar, Badge, Menu, MenuItem,
-  Tooltip, useTheme, Button
+  Tooltip, useTheme, Button, Box
 } from '@mui/material';
 
 import {
@@ -26,6 +26,7 @@ const menuLinks = [
 export default function Navbar({ darkMode, toggleDarkMode }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
+  const [user, setUser] = useState(null); // 🧠 null = not logged in
   const isMenuOpen = Boolean(anchorEl);
   const theme = useTheme();
 
@@ -33,48 +34,44 @@ export default function Navbar({ darkMode, toggleDarkMode }) {
   const handleMenuOpen = (event) => setAnchorEl(event.currentTarget);
   const handleMenuClose = () => setAnchorEl(null);
 
+  const handleLogin = () => setUser({ name: 'John Doe' });
+  const handleLogout = () => {
+    setUser(null);
+    handleMenuClose();
+  };
+
   const drawerContent = (
     <Box
       role="presentation"
       onClick={toggleDrawer(false)}
       onKeyDown={toggleDrawer(false)}
       sx={{
-        width: 250,
+        width: 260,
         height: '100%',
         backgroundColor: theme.palette.background.paper,
       }}
     >
-      <Typography
-        variant="h6"
-        sx={{
-          px: 3,
-          pt: 2,
-          pb: 1,
-          fontWeight: 600,
-          color: theme.palette.mode === 'dark' ? '#fff' : '#222',
-        }}
-      >
+      <Typography variant="h6" sx={{ px: 3, pt: 2, pb: 1, fontWeight: 600 }}>
         Navigation
       </Typography>
       <Divider />
       <List>
         {menuLinks.map((item) => (
-          <ListItem
-            key={item.label}
-            button
-            component={Link}
-            to={item.path}
-          >
-            <ListItemText
-              primary={item.label}
-              primaryTypographyProps={{
-                fontSize: '1rem',
-                fontWeight: 500,
-                color: theme.palette.mode === 'dark' ? '#fff' : '#333',
-              }}
-            />
+          <ListItem key={item.label} button component={Link} to={item.path}>
+            <ListItemText primary={item.label} />
           </ListItem>
         ))}
+        <Divider sx={{ my: 1 }} />
+        {!user && (
+          <>
+            <ListItem button component={Link} to="/login">
+              <ListItemText primary="Login" />
+            </ListItem>
+            <ListItem button component={Link} to="/signup">
+              <ListItemText primary="Sign Up" />
+            </ListItem>
+          </>
+        )}
       </List>
     </Box>
   );
@@ -88,15 +85,8 @@ export default function Navbar({ darkMode, toggleDarkMode }) {
           zIndex: theme.zIndex.drawer + 1,
         }}
       >
-        <Toolbar
-          sx={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            gap: 2,
-            px: 2,
-          }}
-        >
-          {/* Left: Logo & Drawer */}
+        <Toolbar sx={{ justifyContent: 'space-between', px: 2 }}>
+          {/* LEFT: Drawer Toggle + Logo */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <IconButton
               edge="start"
@@ -118,22 +108,14 @@ export default function Navbar({ darkMode, toggleDarkMode }) {
             >
               RealEstate
             </Typography>
-
-            {/* Desktop Menu Links */}
+            {/* Desktop Menu */}
             <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: 2, ml: 2 }}>
               {menuLinks.map((item) => (
                 <Button
                   key={item.label}
                   component={Link}
                   to={item.path}
-                  sx={{
-                    color: '#fff',
-                    fontWeight: 600,
-                    textTransform: 'none',
-                    '&:hover': {
-                      backgroundColor: 'rgba(255,255,255,0.1)',
-                    },
-                  }}
+                  sx={{ color: '#fff', fontWeight: 600, textTransform: 'none' }}
                 >
                   {item.label}
                 </Button>
@@ -141,8 +123,8 @@ export default function Navbar({ darkMode, toggleDarkMode }) {
             </Box>
           </Box>
 
-          {/* Center: Search */}
-          <Box sx={{ flex: 1, maxWidth: 400, display: { xs: 'none', sm: 'flex' } }}>
+          {/* CENTER: Search */}
+          <Box sx={{ flex: 1, mx: 4, maxWidth: 400, display: { xs: 'none', sm: 'flex' } }}>
             <Search sx={{ width: '100%' }}>
               <SearchIconWrapper>
                 <SearchIcon fontSize="small" />
@@ -151,7 +133,7 @@ export default function Navbar({ darkMode, toggleDarkMode }) {
             </Search>
           </Box>
 
-          {/* Right: Icons */}
+          {/* RIGHT: Icon buttons + Auth Buttons */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
             <IconButton color="inherit">
               <Badge badgeContent={3} color="error">
@@ -165,21 +147,46 @@ export default function Navbar({ darkMode, toggleDarkMode }) {
               </IconButton>
             </Tooltip>
 
-            <IconButton onClick={handleMenuOpen} color="inherit">
-              <Avatar sx={{ width: 32, height: 32 }}>
-                <AccountCircle />
-              </Avatar>
-            </IconButton>
+            {user ? (
+              <IconButton onClick={handleMenuOpen} color="inherit">
+                <Avatar sx={{ width: 32, height: 32 }}>
+                  <AccountCircle />
+                </Avatar>
+              </IconButton>
+            ) : (
+              <>
+                <Button
+                  component={Link}
+                  to="/login"
+                  sx={{ color: '#fff', textTransform: 'none', fontWeight: 500 }}
+                >
+                  Login
+                </Button>
+                <Button
+                  component={Link}
+                  to="/signup"
+                  sx={{
+                    color: '#fff',
+                    border: '1px solid white',
+                    borderRadius: 3,
+                    px: 2,
+                    textTransform: 'none',
+                  }}
+                >
+                  Sign Up
+                </Button>
+              </>
+            )}
           </Box>
         </Toolbar>
       </AppBar>
 
-      {/* Drawer for mobile */}
+      {/* Drawer */}
       <Drawer anchor="left" open={drawerOpen} onClose={toggleDrawer(false)}>
         {drawerContent}
       </Drawer>
 
-      {/* User menu */}
+      {/* Dropdown Menu */}
       <Menu
         anchorEl={anchorEl}
         open={isMenuOpen}
@@ -189,7 +196,7 @@ export default function Navbar({ darkMode, toggleDarkMode }) {
       >
         <MenuItem onClick={handleMenuClose}>Profile</MenuItem>
         <MenuItem onClick={handleMenuClose}>Settings</MenuItem>
-        <MenuItem onClick={handleMenuClose}>Logout</MenuItem>
+        <MenuItem onClick={handleLogout}>Logout</MenuItem>
       </Menu>
     </>
   );
