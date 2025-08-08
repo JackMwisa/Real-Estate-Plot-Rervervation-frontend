@@ -1,5 +1,4 @@
-
-import React, { useEffect, useMemo, useRef } from "react";
+import React, { useEffect, useMemo } from "react";
 import { useImmerReducer } from "use-immer";
 import { useNavigate, useParams, Link as RouterLink } from "react-router-dom";
 import Axios from "axios";
@@ -12,12 +11,9 @@ import "leaflet/dist/leaflet.css";
 // Fix default marker icons for Leaflet (Vite/CRA)
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
-  iconRetinaUrl:
-    "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-  iconUrl:
-    "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  shadowUrl:
-    "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
 });
 
 // Assets
@@ -45,14 +41,19 @@ import {
   Link,
   Dialog,
   Snackbar,
+  Divider,
+  Card,
+  CardMedia,
+  CardContent,
 } from "@mui/material";
 import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
 import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
 import RoomIcon from "@mui/icons-material/Room";
 import LocalPhoneIcon from "@mui/icons-material/LocalPhone";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import PaymentsIcon from "@mui/icons-material/Payments";
 
-// ---- Config (keeps your structure) ----
+// ---- Config ----
 const API_BASE = import.meta.env.VITE_API_BASE ?? "http://127.0.0.1:8000";
 const LISTING_URL = (id) => `${API_BASE}/api/listings/${id}/`;
 const LISTING_DELETE_URL = (id) => `${API_BASE}/api/listings/${id}/delete/`;
@@ -88,14 +89,12 @@ const priceLabel = (l) => {
 // Haversine (km)
 const distanceKm = (lat1, lon1, lat2, lon2) => {
   const toRad = (x) => (x * Math.PI) / 180;
-  const R = 6371; // km
+  const R = 6371;
   const dLat = toRad(lat2 - lat1);
   const dLon = toRad(lon2 - lon1);
   const a =
     Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) *
-      Math.cos(toRad(lat2)) *
-      Math.sin(dLon / 2) ** 2;
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 };
 
@@ -172,9 +171,7 @@ export default function ListingDetail() {
         dispatch({ type: "error", value: "" });
       } catch (err) {
         const msg =
-          err?.response?.data?.detail ||
-          err?.message ||
-          "Failed to load listing.";
+          err?.response?.data?.detail || err?.message || "Failed to load listing.";
         dispatch({ type: "error", value: msg });
       } finally {
         dispatch({ type: "loading", value: false });
@@ -183,7 +180,7 @@ export default function ListingDetail() {
     return () => source.cancel();
   }, [id]);
 
-  // Gallery images (keep your fields)
+  // Gallery images
   const gallery = useMemo(() => {
     if (!state.listing) return [];
     return [
@@ -200,6 +197,7 @@ export default function ListingDetail() {
       type: "galleryIndex",
       value: (state.galleryIndex + 1) % Math.max(1, gallery.length),
     });
+
   const prevImg = () =>
     dispatch({
       type: "galleryIndex",
@@ -232,7 +230,7 @@ export default function ListingDetail() {
     }
   };
 
-  // Skeletons
+  // Loading skeleton
   if (state.loading) {
     return (
       <Box sx={{ maxWidth: 1200, mx: "auto", p: { xs: 2, sm: 3 } }}>
@@ -283,21 +281,31 @@ export default function ListingDetail() {
       })
     : "";
 
-  const pois = Array.isArray(l.listing_pois_within_10km)
-    ? l.listing_pois_within_10km
-    : [];
+  const pois = Array.isArray(l.listing_pois_within_10km) ? l.listing_pois_within_10km : [];
+
+  // ----- Go to Payment -----
+  const goToPayment = () => {
+    // push to /pay carrying minimal info
+    navigate("/pay", {
+      state: {
+        listingId: l.id,
+        title: l.title,
+        amount: Number(l.price) || 0,
+        currency: l.property_status?.toLowerCase() === "sale" ? "USD" : "USD",
+        meta: {
+          listing_type: l.listing_type,
+          property_status: l.property_status,
+          rental_frequency: l.rental_frequency,
+        },
+      },
+    });
+  };
 
   return (
-    <Box sx={{ maxWidth: 1200, mx: "auto", p: { xs: 2, sm: 3 }, pb: 4 }}>
+    <Box sx={{ maxWidth: 1200, mx: "auto", p: { xs: 2, sm: 3 }, pb: 10 }}>
       {/* Breadcrumbs */}
       <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 2 }}>
-        <Link
-          underline="hover"
-          color="inherit"
-          component={RouterLink}
-          to="/listings"
-          sx={{ cursor: "pointer" }}
-        >
+        <Link underline="hover" color="inherit" component={RouterLink} to="/listings">
           Listings
         </Link>
         <Typography color="text.primary">{l.title}</Typography>
@@ -392,7 +400,7 @@ export default function ListingDetail() {
         </Box>
       )}
 
-      {/* Top meta + price */}
+      {/* Top meta + price + CTA */}
       <Paper sx={{ p: 2, borderRadius: 2, mb: 2 }}>
         <Grid container spacing={2} alignItems="center">
           <Grid item xs={12} md={8}>
@@ -402,17 +410,19 @@ export default function ListingDetail() {
             <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 0.5, flexWrap: "wrap" }}>
               <RoomIcon fontSize="small" />
               <Typography variant="body1">{l.borough}</Typography>
-              {postedLabel && (
-                <Chip size="small" label={postedLabel} sx={{ ml: 1 }} />
-              )}
+              {postedLabel && <Chip size="small" label={postedLabel} sx={{ ml: 1 }} />}
             </Stack>
           </Grid>
-          <Grid item xs={12} md={4} sx={{ textAlign: { xs: "left", md: "right" } }}>
-            <Chip
-              color="success"
-              label={priceLabel(l)}
-              sx={{ fontWeight: 700, fontSize: 16 }}
-            />
+          <Grid
+            item
+            xs={12}
+            md={4}
+            sx={{ textAlign: { xs: "left", md: "right" }, display: "flex", gap: 1, justifyContent: { xs: "flex-start", md: "flex-end" } }}
+          >
+            <Chip color="success" label={priceLabel(l)} sx={{ fontWeight: 700, fontSize: 16 }} />
+            <Button startIcon={<PaymentsIcon />} variant="contained" color="primary" onClick={goToPayment}>
+              Reserve / Pay
+            </Button>
           </Grid>
         </Grid>
       </Paper>
@@ -424,21 +434,11 @@ export default function ListingDetail() {
           {l.bedrooms ? <Chip label={`${l.bedrooms} Beds`} /> : null}
           {l.bathrooms ? <Chip label={`${l.bathrooms} Baths`} /> : null}
           {l.area_size ? <Chip label={`${l.area_size} m²`} /> : null}
-          {l.furnished ? (
-            <Chip icon={<CheckCircleIcon color="success" />} label="Furnished" />
-          ) : null}
-          {l.pool ? (
-            <Chip icon={<CheckCircleIcon color="success" />} label="Pool" />
-          ) : null}
-          {l.elevator ? (
-            <Chip icon={<CheckCircleIcon color="success" />} label="Elevator" />
-          ) : null}
-          {l.cctv ? (
-            <Chip icon={<CheckCircleIcon color="success" />} label="CCTV" />
-          ) : null}
-          {l.parking ? (
-            <Chip icon={<CheckCircleIcon color="success" />} label="Parking" />
-          ) : null}
+          {l.furnished ? <Chip icon={<CheckCircleIcon color="success" />} label="Furnished" /> : null}
+          {l.pool ? <Chip icon={<CheckCircleIcon color="success" />} label="Pool" /> : null}
+          {l.elevator ? <Chip icon={<CheckCircleIcon color="success" />} label="Elevator" /> : null}
+          {l.cctv ? <Chip icon={<CheckCircleIcon color="success" />} label="CCTV" /> : null}
+          {l.parking ? <Chip icon={<CheckCircleIcon color="success" />} label="Parking" /> : null}
         </Stack>
       </Paper>
 
@@ -456,64 +456,56 @@ export default function ListingDetail() {
       <Paper sx={{ p: 2, borderRadius: 2, mb: 2 }}>
         <Grid container spacing={2} alignItems="center">
           <Grid item xs={12} sm="auto">
-            <img
-              src={state.seller?.profile_picture || defaultProfilePicture}
-              alt={state.seller?.agency_name || "Agency"}
-              style={{
-                width: 160,
-                height: 120,
-                objectFit: "cover",
-                borderRadius: 8,
-                cursor: "pointer",
-              }}
-              onClick={() =>
-                navigate(`/agencies/${state.seller?.seller ?? l.seller}`)
-              }
-            />
+            <Card sx={{ width: 200 }}>
+              <CardMedia
+                component="img"
+                height="120"
+                image={state.seller?.profile_picture || defaultProfilePicture}
+                alt={state.seller?.agency_name || "Agency"}
+                sx={{ objectFit: "cover", cursor: "pointer" }}
+                onClick={() => navigate(`/agencies/${state.seller?.seller ?? l.seller}`)}
+              />
+              <CardContent sx={{ py: 1.5 }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                  {state.seller?.agency_name || "Agency"}
+                </Typography>
+                <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 0.5, flexWrap: "wrap" }}>
+                  {state.seller?.phone_number ? (
+                    <Chip
+                      icon={<LocalPhoneIcon />}
+                      label={
+                        <a href={`tel:${state.seller.phone_number}`} style={{ color: "inherit", textDecoration: "none" }}>
+                          {state.seller.phone_number}
+                        </a>
+                      }
+                      variant="outlined"
+                      size="small"
+                    />
+                  ) : null}
+                </Stack>
+              </CardContent>
+            </Card>
           </Grid>
+
           <Grid item xs>
-            <Typography variant="h6" sx={{ fontWeight: 800 }}>
-              {state.seller?.agency_name || "Agency"}
+            <Typography variant="body2" color="text.secondary">
+              Contact the agency directly for viewing or more details. You can also reserve the property now to secure it.
             </Typography>
-            <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 0.5, flexWrap: "wrap" }}>
-              {state.seller?.phone_number ? (
-                <Chip
-                  icon={<LocalPhoneIcon />}
-                  label={
-                    <a
-                      href={`tel:${state.seller.phone_number}`}
-                      style={{ color: "inherit", textDecoration: "none" }}
-                    >
-                      {state.seller.phone_number}
-                    </a>
-                  }
-                  variant="outlined"
-                />
-              ) : null}
-              <Button
-                size="small"
-                onClick={() =>
-                  navigate(`/agencies/${state.seller?.seller ?? l.seller}`)
-                }
-              >
+            <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
+              <Button size="small" onClick={() => navigate(`/agencies/${state.seller?.seller ?? l.seller}`)}>
                 View Agency
               </Button>
             </Stack>
           </Grid>
 
-          {/* Owner-only actions: you can gate by userId in localStorage */}
+          {/* Owner-only actions */}
           {String(localStorage.getItem("auth_user_id") || "") === String(l.seller ?? "") && (
             <Grid item xs={12} sm="auto">
               <Stack direction="row" spacing={1}>
                 <Button variant="contained" onClick={() => dispatch({ type: "openUpdate" })}>
                   Update
                 </Button>
-                <Button
-                  variant="contained"
-                  color="error"
-                  disabled={state.deleting}
-                  onClick={handleDelete}
-                >
+                <Button variant="contained" color="error" disabled={state.deleting} onClick={handleDelete}>
                   {state.deleting ? "Deleting…" : "Delete"}
                 </Button>
               </Stack>
@@ -523,25 +515,27 @@ export default function ListingDetail() {
       </Paper>
 
       {/* Map + POIs */}
-      <Grid container spacing={2} alignItems="stretch">
-        {/* POI list */}
-        <Grid item xs={12} md={4}>
-          <Paper sx={{ p: 2, borderRadius: 2, height: "100%", maxHeight: 420, overflow: "auto" }}>
+      <Paper sx={{ p: 2, borderRadius: 2 }}>
+        <Grid container spacing={2} alignItems="stretch">
+          {/* POI list */}
+          <Grid item xs={12} md={4}>
             <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
               Nearby Places (within 10km)
             </Typography>
+            <Divider sx={{ mb: 1 }} />
             {pois.length === 0 ? (
               <Typography variant="body2" color="text.secondary">
                 No nearby places registered.
               </Typography>
             ) : (
-              <Stack spacing={1}>
+              <Stack spacing={1} sx={{ maxHeight: 420, overflow: "auto" }}>
                 {pois.map((poi) => {
                   const lat = poi?.location?.coordinates?.[0];
                   const lng = poi?.location?.coordinates?.[1];
-                  const km = lat != null && lng != null && l.latitude != null && l.longitude != null
-                    ? distanceKm(l.latitude, l.longitude, lat, lng).toFixed(2)
-                    : null;
+                  const km =
+                    lat != null && lng != null && l.latitude != null && l.longitude != null
+                      ? distanceKm(l.latitude, l.longitude, lat, lng).toFixed(2)
+                      : null;
 
                   return (
                     <Paper key={poi.id} sx={{ p: 1, borderRadius: 2 }}>
@@ -551,7 +545,10 @@ export default function ListingDetail() {
                       <Typography variant="body2" color="text.secondary">
                         {poi.type}
                         {km ? (
-                          <> • <b style={{ color: "green" }}>{km} km</b></>
+                          <>
+                            {" "}
+                            • <b style={{ color: "green" }}>{km} km</b>
+                          </>
                         ) : null}
                       </Typography>
                     </Paper>
@@ -559,57 +556,73 @@ export default function ListingDetail() {
                 })}
               </Stack>
             )}
-          </Paper>
+          </Grid>
+
+          {/* Map */}
+          <Grid item xs={12} md={8}>
+            <Box sx={{ borderRadius: 2, overflow: "hidden", height: 420 }}>
+              {l.latitude != null && l.longitude != null ? (
+                <MapContainer center={[l.latitude, l.longitude]} zoom={14} scrollWheelZoom style={{ height: "100%", width: "100%" }}>
+                  <TileLayer attribution='&copy; OpenStreetMap contributors' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                  <Marker position={[l.latitude, l.longitude]}>
+                    <Popup>{l.title}</Popup>
+                  </Marker>
+
+                  {pois.map((poi) => {
+                    const lat = poi?.location?.coordinates?.[0];
+                    const lng = poi?.location?.coordinates?.[1];
+                    if (lat == null || lng == null) return null;
+                    return (
+                      <Marker key={poi.id} position={[lat, lng]} icon={poiIcon(poi.type)}>
+                        <Popup>{poi.name}</Popup>
+                      </Marker>
+                    );
+                  })}
+                </MapContainer>
+              ) : (
+                <Box sx={{ p: 2 }}>
+                  <Alert severity="warning">This listing has no valid coordinates.</Alert>
+                </Box>
+              )}
+            </Box>
+          </Grid>
         </Grid>
+      </Paper>
 
-        {/* Map */}
-        <Grid item xs={12} md={8}>
-          <Paper sx={{ p: 0, borderRadius: 2, overflow: "hidden", height: 420 }}>
-            {l.latitude != null && l.longitude != null ? (
-              <MapContainer
-                center={[l.latitude, l.longitude]}
-                zoom={14}
-                scrollWheelZoom
-                style={{ height: "100%", width: "100%" }}
-              >
-                <TileLayer
-                  attribution='&copy; OpenStreetMap contributors'
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                />
-                <Marker position={[l.latitude, l.longitude]}>
-                  <Popup>{l.title}</Popup>
-                </Marker>
-
-                {pois.map((poi) => {
-                  const lat = poi?.location?.coordinates?.[0];
-                  const lng = poi?.location?.coordinates?.[1];
-                  if (lat == null || lng == null) return null;
-                  return (
-                    <Marker
-                      key={poi.id}
-                      position={[lat, lng]}
-                      icon={poiIcon(poi.type)}
-                    >
-                      <Popup>{poi.name}</Popup>
-                    </Marker>
-                  );
-                })}
-              </MapContainer>
-            ) : (
-              <Box sx={{ p: 2 }}>
-                <Alert severity="warning">
-                  This listing has no valid coordinates.
-                </Alert>
-              </Box>
-            )}
-          </Paper>
-        </Grid>
-      </Grid>
-
-      {/* Update dialog (keeps your component) */}
+      {/* Update dialog */}
       <Dialog open={state.openUpdate} onClose={() => dispatch({ type: "closeUpdate" })} fullScreen>
         <ListingUpdate listingData={l} closeDialog={() => dispatch({ type: "closeUpdate" })} />
       </Dialog>
+
+      {/* Bottom sticky payment bar */}
+      <Paper
+        elevation={6}
+        sx={{
+          position: "fixed",
+          left: 0,
+          right: 0,
+          bottom: 0,
+          p: 1.5,
+          borderTopLeftRadius: 12,
+          borderTopRightRadius: 12,
+          display: "flex",
+          alignItems: "center",
+          gap: 2,
+          justifyContent: "center",
+          zIndex: 1200,
+        }}
+      >
+        <Chip color="success" label={priceLabel(l)} sx={{ fontWeight: 700 }} />
+        <Button
+          startIcon={<PaymentsIcon />}
+          variant="contained"
+          color="primary"
+          size="large"
+          onClick={goToPayment}
+        >
+          Reserve / Pay
+        </Button>
+      </Paper>
 
       {/* Snackbar */}
       <Snackbar

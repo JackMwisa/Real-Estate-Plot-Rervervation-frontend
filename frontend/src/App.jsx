@@ -16,6 +16,8 @@ import Signup from './pages//Auth/Signup';
 import Profile from './pages/Profile';
 import AgencyDetail from './pages/AgencyDetail';
 import PaymentPage from './pages/PaymentPage';
+import PaymentSuccess from "./pages/PaymentSuccess";
+import PaymentCancel from "./pages/PaymentCancel";
 
 function App() {
   const [darkMode, setDarkMode] = useState(false);
@@ -47,7 +49,9 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/profile" element={<Profile />} />
-          <Route path="/pay/:listingId" element={<PaymentPage />} />
+          <Route path="/pay" element={<PaymentPage />} />
+          <Route path="/payment-success" element={<PaymentSuccess />} />
+          <Route path="/payment-cancel" element={<PaymentCancel />} />
         </Routes>
         <Footer darkMode={darkMode} />
       </BrowserRouter>
