@@ -1,7 +1,11 @@
 // src/pages/PaymentPage.jsx
 import React, { useMemo, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { paymentsApi } from "../api/paymentsApi";
+import {
+  createPayPalOrder,
+  createStripeCheckout,
+  // initFlutterwavePayment, // optional if you want server-init; we use inline here
+} from "../api/paymentsApi";
 import useScript from "../hooks/useScript";
 import {
   Box, Paper, Typography, TextField, RadioGroup, FormControlLabel, Radio,
@@ -10,18 +14,18 @@ import {
 
 // PUBLIC keys go in frontend env
 const STRIPE_PK = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
+const PAYPAL_CLIENT_ID = import.meta.env.VITE_PAYPAL_CLIENT_ID;
+const FLW_PUBLIC_KEY = import.meta.env.VITE_FLW_PUBLIC_KEY;
 
 // External SDKs (loaded on demand)
 const FLW_SRC = "https://checkout.flutterwave.com/v3.js";
 const STRIPE_SRC = "https://js.stripe.com/v3/";
-// Build PayPal SDK URL with your clientId
-const PAYPAL_SRC = `https://www.paypal.com/sdk/js?client-id=${import.meta.env.VITE_PAYPAL_CLIENT_ID}&currency=USD&intent=capture&enable-funding=venmo`;
+const PAYPAL_SRC = `https://www.paypal.com/sdk/js?client-id=${PAYPAL_CLIENT_ID}&currency=USD&intent=capture&enable-funding=venmo`;
 
 export default function PaymentPage() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
 
-  // You can pass listingId & amount via URL, e.g. /pay?listingId=12&amount=1500
   const listingId = params.get("listingId");
   const defaultAmount = Number(params.get("amount") || 1000);
 
@@ -45,9 +49,11 @@ export default function PaymentPage() {
   }, [name, email, amount]);
 
   const meta = useMemo(
-    () => ({ listingId: listingId ? Number(listingId) : null }),
-    [listingId]
+    () => ({ listingId: listingId ? Number(listingId) : null, name, email }),
+    [listingId, name, email]
   );
+
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
 
   // ---------- PayPal ----------
   const payWithPayPal = async () => {
@@ -57,38 +63,40 @@ export default function PaymentPage() {
       if (paypalStatus !== "ready") return setErr("PayPal SDK still loading…");
 
       setBusy(true);
-      // 1) Ask backend to create the order
-      const order = await paymentsApi.createPayPalOrder(amount, "USD", { ...meta, name, email });
+      // Ask backend to create the order and set your redirect URLs
+      const order = await createPayPalOrder(amount, "USD", {
+        successUrl: `${origin}/payment-success?gateway=paypal`,
+        cancelUrl: `${origin}/payment-cancel`,
+      });
 
-      // 2) Use the approval link OR render buttons; simpler: redirect to approval
-      const approve = order?.links?.find(l => l.rel === "approve")?.href;
+      // If backend returns approval link:
+      const approve = order?.links?.find((l) => l.rel === "approve")?.href;
       if (approve) {
-        window.location.href = approve; // PayPal hosted page, will return to your success/cancel URLs
+        window.location.href = approve; // go to PayPal hosted page
       } else {
         setErr("Could not get PayPal approval link.");
       }
     } catch (e) {
-      setErr(e?.response?.data?.error || e.message);
+      setErr(e?.message || "PayPal create order failed.");
     } finally {
       setBusy(false);
     }
   };
 
-  // ---------- Flutterwave ----------
+  // ---------- Flutterwave (inline) ----------
   const payWithFlutterwave = async () => {
     try {
       setErr("");
       if (!isValid) return setErr("Please fill name, email and amount.");
       if (flutterwaveStatus !== "ready") return setErr("Flutterwave SDK still loading…");
       if (!window.FlutterwaveCheckout) return setErr("Flutterwave SDK not found.");
+      if (!FLW_PUBLIC_KEY) return setErr("Flutterwave public key missing (VITE_FLW_PUBLIC_KEY).");
 
       setBusy(true);
-      // You can either let backend return a hosted pay link OR use inline modal.
-      // Here we do INLINE (like your e-com code).
       window.FlutterwaveCheckout({
-        public_key: import.meta.env.VITE_FLW_PUBLIC_KEY, // PUBLIC
+        public_key: FLW_PUBLIC_KEY,
         tx_ref: `TX_${Date.now()}`,
-        amount: Number(amount) * 3500, // UGX approx (adjust as needed or let backend compute)
+        amount: Number(amount) * 3500, // convert if you want UGX inline; or use USD if you prefer
         currency: "UGX",
         payment_options: "card, mobilemoneyuganda",
         customer: { email, name },
@@ -99,15 +107,13 @@ export default function PaymentPage() {
           logo: "/favicon.ico",
         },
         callback: function (response) {
-          // Let the backend verify (optional). For now, go to success page with tx details.
+          // Optionally verify on backend first, then:
           navigate(`/payment-success?gateway=flutterwave&tx_ref=${response.tx_ref}`);
         },
-        onclose: function () {
-          // modal closed
-        },
+        onclose: function () {},
       });
     } catch (e) {
-      setErr(e?.response?.data?.error || e.message);
+      setErr(e?.message || "Flutterwave init failed.");
     } finally {
       setBusy(false);
     }
@@ -120,15 +126,22 @@ export default function PaymentPage() {
       if (!isValid) return setErr("Please fill name, email and amount.");
       if (stripeStatus !== "ready") return setErr("Stripe SDK still loading…");
       if (!window.Stripe) return setErr("Stripe SDK not found.");
+      if (!STRIPE_PK) return setErr("Stripe publishable key missing (VITE_STRIPE_PUBLISHABLE_KEY).");
 
       setBusy(true);
-      const { id } = await paymentsApi.createStripeSession(amount, "usd", "Plot Reservation", { ...meta, name, email });
+      const { id } = await createStripeCheckout({
+        amount,
+        currency: "usd",
+        productName: listingId ? `Plot Reservation #${listingId}` : "Plot Reservation",
+        successUrl: `${origin}/payment-success?gateway=stripe`,
+        cancelUrl: `${origin}/payment-cancel`,
+      });
       if (!id) return setErr("Could not create Stripe session.");
 
       const stripe = window.Stripe(STRIPE_PK);
       await stripe.redirectToCheckout({ sessionId: id });
     } catch (e) {
-      setErr(e?.response?.data?.error || e.message);
+      setErr(e?.message || "Stripe create session failed.");
     } finally {
       setBusy(false);
     }
@@ -151,19 +164,8 @@ export default function PaymentPage() {
         )}
 
         <Stack spacing={2} sx={{ mb: 2 }}>
-          <TextField
-            label="Full Name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-          />
-          <TextField
-            label="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            type="email"
-          />
+          <TextField label="Full Name" value={name} onChange={(e) => setName(e.target.value)} required />
+          <TextField label="Email" value={email} onChange={(e) => setEmail(e.target.value)} required type="email" />
           <TextField
             label="Amount (USD)"
             type="number"
@@ -180,12 +182,7 @@ export default function PaymentPage() {
           Choose Payment Method
         </Typography>
 
-        <RadioGroup
-          row
-          value={method}
-          onChange={(e) => setMethod(e.target.value)}
-          sx={{ mb: 2 }}
-        >
+        <RadioGroup row value={method} onChange={(e) => setMethod(e.target.value)} sx={{ mb: 2 }}>
           <FormControlLabel value="paypal" control={<Radio />} label="PayPal" />
           <FormControlLabel value="flutterwave" control={<Radio />} label="Flutterwave (UGX)" />
           <FormControlLabel value="stripe" control={<Radio />} label="Stripe" />
@@ -193,11 +190,7 @@ export default function PaymentPage() {
 
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
           {method === "paypal" && (
-            <Button
-              disabled={!isValid || busy || paypalStatus !== "ready"}
-              variant="contained"
-              onClick={payWithPayPal}
-            >
+            <Button disabled={!isValid || busy || paypalStatus !== "ready"} variant="contained" onClick={payWithPayPal}>
               Pay with PayPal
             </Button>
           )}
