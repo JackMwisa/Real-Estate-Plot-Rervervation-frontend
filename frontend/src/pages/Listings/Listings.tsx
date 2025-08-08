@@ -1,5 +1,5 @@
 // src/pages/Listings.tsx
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   MapContainer,
   TileLayer,
@@ -25,6 +25,7 @@ import {
   Alert,
 } from "@mui/material";
 import RoomIcon from "@mui/icons-material/Room";
+import { useNavigate } from "react-router-dom";
 
 import houseIconPng from "../../assets/Mapicons/house.png";
 import apartmentIconPng from "../../assets/Mapicons/apartment.png";
@@ -59,13 +60,8 @@ type Listing = {
   price: string | number;
   latitude: number | null;
   longitude: number | null;
-
-  // Use whatever you return from DRF:
-  // image_main: relative path like "/media/..."
   image_main?: string | null;
-  // or absolute URL via SerializerMethodField:
   image_main_url?: string | null;
-
   seller_username?: string | null;
   seller_agency_name?: string | null;
   listing_pois_within_10km?: Poi[];
@@ -76,6 +72,8 @@ const API_BASE = import.meta.env.VITE_API_BASE ?? "http://localhost:8000";
 const Listings: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  const navigate = useNavigate();
+
   const [view, setView] = useState<"standard" | "satellite">("standard");
   const mapRef = useRef<Map | null>(null);
 
@@ -108,11 +106,19 @@ const Listings: React.FC = () => {
     return null;
   };
 
-  const handleFlyTo = (lat?: number | null, lon?: number | null) => {
+  const handleFlyTo = useCallback((lat?: number | null, lon?: number | null) => {
     if (mapRef.current && lat != null && lon != null) {
       mapRef.current.flyTo([lat, lon], 15);
     }
-  };
+  }, []);
+
+  const goToDetails = useCallback(
+    (id: number) => {
+      // Make sure your router has <Route path="/listings/:id" element={<ListingDetail />} />
+      navigate(`/listings/${id}`);
+    },
+    [navigate]
+  );
 
   // Resize fix
   useEffect(() => {
@@ -152,10 +158,10 @@ const Listings: React.FC = () => {
   };
 
   const imageUrl = (l: Listing) => {
-    // Prefer absolute URL from API; fallback to relative + API_BASE
-    if (l.image_main_url) return l.image_main_url;
-    if (l.image_main) return `${API_BASE}${l.image_main}`;
+    if (l.image_main_url) return l.image_main_url;        // absolute from API
+    if (l.image_main) return `${API_BASE}${l.image_main}`; // relative -> absolute
     return "https://via.placeholder.com/640x360?text=Listing";
+    // or your local placeholder asset
   };
 
   if (loading) {
@@ -237,11 +243,13 @@ const Listings: React.FC = () => {
                   height="160"
                   image={imageUrl(listing)}
                   alt={listing.title}
-                  onClick={() => handleFlyTo(listing.latitude, listing.longitude)}
+                  onClick={() => goToDetails(listing.id)}
                   sx={{ cursor: "pointer", objectFit: "cover" }}
                 />
                 <CardContent>
-                  <Typography variant="h6">{listing.title}</Typography>
+                  <Typography variant="h6" sx={{ cursor: "pointer" }} onClick={() => goToDetails(listing.id)}>
+                    {listing.title}
+                  </Typography>
                   <Typography variant="body2" color="text.secondary">
                     {(listing.description || "").slice(0, 100)}...
                   </Typography>
@@ -296,7 +304,7 @@ const Listings: React.FC = () => {
                   icon={pickIcon(listing.listing_type)}
                 >
                   <Popup>
-                    <Typography variant="h6">{listing.title}</Typography>
+                    <Typography variant="h6" sx={{ mb: 1 }}>{listing.title}</Typography>
                     <img
                       src={imageUrl(listing)}
                       alt={listing.title}
@@ -305,7 +313,13 @@ const Listings: React.FC = () => {
                     <Typography variant="body2">
                       {(listing.description || "").slice(0, 100)}...
                     </Typography>
-                    <Button size="small" variant="contained" fullWidth sx={{ mt: 1 }}>
+                    <Button
+                      size="small"
+                      variant="contained"
+                      fullWidth
+                      sx={{ mt: 1 }}
+                      onClick={() => goToDetails(listing.id)}   // <-- FIX
+                    >
                       View Details
                     </Button>
                   </Popup>

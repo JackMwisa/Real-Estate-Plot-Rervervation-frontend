@@ -8,6 +8,7 @@ import Navbar from './Components/Navbar/Navbar';
 import Footer from './Components/Footer/Footer';
 import Home from './pages/Home';
 import Listings from './pages/Listings/Listings.tsx';
+import ListingDetail from './pages/Listings/ListingDetail';
 import Agencies from './pages/Agencies';
 import AddProperty from './pages/Property/AddProperty';
 import Login from './pages/Login';
@@ -38,6 +39,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/listings" element={<Listings />} />
+          <Route path="/listings/:id" element={<ListingDetail />} />
           <Route path="/agencies/:id" element={<AgencyDetail />} />
           <Route path="/agencies" element={<Agencies />} />
           <Route path="/add-property" element={<AddProperty />} />
