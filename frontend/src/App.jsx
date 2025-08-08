@@ -13,6 +13,7 @@ import AddProperty from './pages/Property/AddProperty';
 import Login from './pages/Login';
 import Signup from './pages//Auth/Signup';
 import Profile from './pages/Profile';
+import AgencyDetail from './pages/AgencyDetail';
 
 function App() {
   const [darkMode, setDarkMode] = useState(false);
@@ -37,7 +38,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/listings" element={<Listings />} />
-          
+          <Route path="/agencies/:id" element={<AgencyDetail />} />
           <Route path="/agencies" element={<Agencies />} />
           <Route path="/add-property" element={<AddProperty />} />
           <Route path="/login" element={<Login />} />
