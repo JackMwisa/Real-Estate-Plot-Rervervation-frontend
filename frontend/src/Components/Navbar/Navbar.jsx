@@ -45,6 +45,7 @@ import { Search, SearchIconWrapper, StyledInputBase } from "./NavbarStyle";
 const API_BASE = import.meta.env.VITE_API_BASE ?? "http://127.0.0.1:8000";
 const ME_URL = `${API_BASE}/api-auth-djoser/users/me/`;
 const LOGOUT_URL = `${API_BASE}/api-auth-djoser/token/logout/`;
+const PROFILE_URL = (userId) => `${API_BASE}/api/profiles/${userId}/`; // your urls.py expects <int:seller>
 
 /// Main menu links (unchanged)
 const menuLinks = [
@@ -60,7 +61,7 @@ export default function Navbar({ darkMode, toggleDarkMode }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
   const isMenuOpen = Boolean(anchorEl);
-  const [user, setUser] = useState(null); // { username, email, id } | null
+  const [user, setUser] = useState(null); // { username, email, id, profile_picture? } | null
   const [loggingOut, setLoggingOut] = useState(false);
 
   /// Feedback
@@ -83,9 +84,39 @@ export default function Navbar({ darkMode, toggleDarkMode }) {
     setSnackOpen(false);
   };
 
+  const performLocalLogout = useCallback(async () => {
+    localStorage.removeItem("auth_token");
+    localStorage.removeItem("auth_username");
+    localStorage.removeItem("auth_email");
+    localStorage.removeItem("auth_user_id");
+    localStorage.removeItem("auth_profile_pic");
+    setUser(null);
+    setAnchorEl(null);
+  }, []);
+
+  /// Fetch profile (for profile_picture)
+  const fetchProfileForPic = useCallback(async (id, token) => {
+    if (!id || !token) return null;
+    try {
+      const res = await Axios.get(PROFILE_URL(id), {
+        headers: { Authorization: `Token ${token}` },
+      });
+      const pic = res?.data?.profile_picture || "";
+      // merge into state + cache for instant next paint
+      setUser((prev) =>
+        prev ? { ...prev, profile_picture: pic } : { id, profile_picture: pic }
+      );
+      localStorage.setItem("auth_profile_pic", pic || "");
+      return pic;
+    } catch {
+      // silently ignore if profile not found yet
+      return null;
+    }
+  }, []);
+
   /// ----------------------------------------
-  /// Boot: attempt to hydrate user from localStorage and verify with backend
-  /// Re-run on route change so navbar stays in sync post-auth flows.
+  /// Boot: hydrate user from cache, then verify with backend
+  /// Re-run on route change so navbar stays in sync post-auth/profile update.
   /// ----------------------------------------
   useEffect(() => {
     const token = localStorage.getItem("auth_token");
@@ -94,56 +125,52 @@ export default function Navbar({ darkMode, toggleDarkMode }) {
       return;
     }
 
-    // /// Use cached values for instant paint
+    // Instant paint from cache
     const cachedUsername = localStorage.getItem("auth_username");
     const cachedEmail = localStorage.getItem("auth_email");
     const cachedId = localStorage.getItem("auth_user_id");
+    const cachedPic = localStorage.getItem("auth_profile_pic");
     if (cachedUsername) {
       setUser({
         username: cachedUsername,
         email: cachedEmail || "",
         id: cachedId ? Number(cachedId) : undefined,
+        profile_picture: cachedPic || "",
       });
     }
 
-    // /// Always verify with backend silently (cancellable)
+    // Verify / refresh data from backend
     const source = Axios.CancelToken.source();
     (async () => {
       try {
-        const res = await Axios.get(ME_URL, {
+        // 1) Who am I?
+        const meRes = await Axios.get(ME_URL, {
           headers: { Authorization: `Token ${token}` },
           cancelToken: source.token,
         });
-        setUser(res.data);
-        // cache for instant next paint
-        localStorage.setItem("auth_username", res.data.username || "");
-        localStorage.setItem("auth_email", res.data.email || "");
-        localStorage.setItem("auth_user_id", String(res.data.id ?? ""));
+
+        const me = meRes.data;
+        setUser((prev) => ({ ...prev, ...me }));
+
+        // Cache base user fields
+        localStorage.setItem("auth_username", me.username || "");
+        localStorage.setItem("auth_email", me.email || "");
+        localStorage.setItem("auth_user_id", String(me.id ?? ""));
+
+        // 2) Pull profile picture (from Profile model)
+        await fetchProfileForPic(me.id, token);
       } catch {
-        // /// Bad/expired token → clear and bounce to login softly
+        // expired/invalid token → clear & bounce softly
         await performLocalLogout();
         navigate("/login");
       }
     })();
 
     return () => source.cancel();
-  }, [location.pathname]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  /// ----------------------------------------
-  /// Local logout (no network) – used on token failures or after API logout
-  /// ----------------------------------------
-  const performLocalLogout = useCallback(async () => {
-    localStorage.removeItem("auth_token");
-    localStorage.removeItem("auth_username");
-    localStorage.removeItem("auth_email");
-    localStorage.removeItem("auth_user_id");
-    setUser(null);
-    setAnchorEl(null);
-  }, []);
+  }, [location.pathname, fetchProfileForPic, navigate, performLocalLogout]);
 
   /// ----------------------------------------
   /// Logout (calls Djoser, then clears locally)
-  /// NOTE: This preserves your original logic but *adds* a proper server logout.
   /// ----------------------------------------
   const handleLogout = useCallback(async () => {
     if (loggingOut) return; // guard double click
@@ -157,12 +184,9 @@ export default function Navbar({ darkMode, toggleDarkMode }) {
       setLoggingOut(true);
 
       if (token) {
-        // Djoser logout (server-side token invalidation)
-        await Axios.post(
-          LOGOUT_URL,
-          null, // body not required for token logout
-          { headers: { Authorization: `Token ${token}` } }
-        );
+        await Axios.post(LOGOUT_URL, null, {
+          headers: { Authorization: `Token ${token}` },
+        });
       }
 
       await performLocalLogout();
@@ -171,12 +195,10 @@ export default function Navbar({ darkMode, toggleDarkMode }) {
       setSnackMsg("You have successfully logged out!");
       setSnackOpen(true);
 
-      // Gentle redirect to login/home after a short toast
       setTimeout(() => {
         navigate("/login");
       }, 800);
-    } catch (err) {
-      // Even if server logout fails, we still clear locally to protect UX
+    } catch {
       await performLocalLogout();
 
       setSnackSeverity("warning");
@@ -191,19 +213,13 @@ export default function Navbar({ darkMode, toggleDarkMode }) {
     }
   }, [loggingOut, navigate, performLocalLogout]);
 
-  /// ----------------------------------------
   /// Drawer (side menu) content
-  /// ----------------------------------------
   const drawerContent = (
     <Box
       role="presentation"
       onClick={toggleDrawer(false)}
       onKeyDown={toggleDrawer(false)}
-      sx={{
-        width: 260,
-        height: "100%",
-        backgroundColor: theme.palette.background.paper,
-      }}
+      sx={{ width: 260, height: "100%", backgroundColor: theme.palette.background.paper }}
     >
       <Typography variant="h6" sx={{ px: 3, pt: 2, pb: 1, fontWeight: 600 }}>
         Navigation
@@ -252,7 +268,7 @@ export default function Navbar({ darkMode, toggleDarkMode }) {
         }}
       >
         <Toolbar sx={{ justifyContent: "space-between", px: 2 }}>
-          {/* /// LEFT: Drawer Toggle + Logo */}
+          {/* LEFT: Drawer Toggle + Logo */}
           <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
             <IconButton
               edge="start"
@@ -277,7 +293,7 @@ export default function Navbar({ darkMode, toggleDarkMode }) {
               RealEstate
             </Typography>
 
-            {/* /// Desktop Menu */}
+            {/* Desktop Menu */}
             <Box sx={{ display: { xs: "none", md: "flex" }, gap: 2, ml: 2 }}>
               {menuLinks.map((item) => (
                 <Button
@@ -292,27 +308,17 @@ export default function Navbar({ darkMode, toggleDarkMode }) {
             </Box>
           </Box>
 
-          {/* /// CENTER: Search */}
-          <Box
-            sx={{
-              flex: 1,
-              mx: 4,
-              maxWidth: 480,
-              display: { xs: "none", sm: "flex" },
-            }}
-          >
+          {/* CENTER: Search */}
+          <Box sx={{ flex: 1, mx: 4, maxWidth: 480, display: { xs: "none", sm: "flex" } }}>
             <Search sx={{ width: "100%" }}>
               <SearchIconWrapper>
                 <SearchIcon fontSize="small" />
               </SearchIconWrapper>
-              <StyledInputBase
-                placeholder="Search…"
-                inputProps={{ "aria-label": "search" }}
-              />
+              <StyledInputBase placeholder="Search…" inputProps={{ "aria-label": "search" }} />
             </Search>
           </Box>
 
-          {/* /// RIGHT: Icons + Auth */}
+          {/* RIGHT: Icons + Auth */}
           <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
             <IconButton color="inherit" aria-label="notifications">
               <Badge badgeContent={3} color="error">
@@ -320,9 +326,7 @@ export default function Navbar({ darkMode, toggleDarkMode }) {
               </Badge>
             </IconButton>
 
-            <Tooltip
-              title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
-            >
+            <Tooltip title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}>
               <IconButton color="inherit" onClick={toggleDarkMode}>
                 {darkMode ? <LightMode /> : <DarkMode />}
               </IconButton>
@@ -341,8 +345,13 @@ export default function Navbar({ darkMode, toggleDarkMode }) {
                   aria-haspopup="true"
                   aria-expanded={isMenuOpen ? "true" : undefined}
                 >
-                  <Avatar sx={{ width: 32, height: 32 }}>
-                    <AccountCircle />
+                  {/* ✅ Show profile picture if we have it, else fallback icon */}
+                  <Avatar
+                    src={user.profile_picture || ""}
+                    alt={user.username || "User"}
+                    sx={{ width: 32, height: 32 }}
+                  >
+                    {!user.profile_picture && <AccountCircle />}
                   </Avatar>
                 </IconButton>
               </>
@@ -374,12 +383,12 @@ export default function Navbar({ darkMode, toggleDarkMode }) {
         </Toolbar>
       </AppBar>
 
-      {/* /// Drawer */}
+      {/* Drawer */}
       <Drawer anchor="left" open={drawerOpen} onClose={toggleDrawer(false)}>
         {drawerContent}
       </Drawer>
 
-      {/* /// Dropdown Menu (avatar) */}
+      {/* Dropdown Menu */}
       <Menu
         id="account-menu"
         anchorEl={anchorEl}
@@ -399,19 +408,14 @@ export default function Navbar({ darkMode, toggleDarkMode }) {
         </MenuItem>
       </Menu>
 
-      {/* /// Snackbar (feedback) */}
+      {/* Snackbar (feedback) */}
       <Snackbar
         open={snackOpen}
         autoHideDuration={3000}
         onClose={closeSnack}
         anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
       >
-        <Alert
-          onClose={closeSnack}
-          severity={snackSeverity}
-          variant="filled"
-          sx={{ width: "100%" }}
-        >
+        <Alert onClose={closeSnack} severity={snackSeverity} variant="filled" sx={{ width: "100%" }}>
           {snackMsg}
         </Alert>
       </Snackbar>
