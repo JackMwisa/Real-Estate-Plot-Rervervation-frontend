@@ -9,7 +9,7 @@ import Footer from './Components/Footer/Footer';
 import Home from './pages/Home';
 import Listings from './pages/Listings/Listings.tsx';
 import Agencies from './pages/Agencies';
-import AddProperty from './pages/AddProperty';
+import AddProperty from './pages/Property/AddProperty';
 import Login from './pages/Login';
 import Signup from './pages//Auth/Signup';
 
