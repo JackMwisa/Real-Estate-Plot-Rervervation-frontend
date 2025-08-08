@@ -2,15 +2,16 @@ import { useState } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
+import ProtectedRoute from "./components/ProtectedRoute";
 
 import Navbar from './Components/Navbar/Navbar';
 import Footer from './Components/Footer/Footer';
 import Home from './pages/Home';
-import Listings from './pages/Listings/Listings';
+import Listings from './pages/Listings/Listings.tsx';
 import Agencies from './pages/Agencies';
 import AddProperty from './pages/AddProperty';
 import Login from './pages/Login';
-import Signup from './pages/Signup';
+import Signup from './pages//Auth/Signup';
 
 function App() {
   const [darkMode, setDarkMode] = useState(false);

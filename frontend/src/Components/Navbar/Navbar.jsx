@@ -1,11 +1,32 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import {
-  AppBar, Toolbar, IconButton, Typography, Drawer, List,
-  ListItem, ListItemText, Divider, Avatar, Badge, Menu, MenuItem,
-  Tooltip, useTheme, Button, Box
-} from '@mui/material';
+// src/components/Navbar.jsx
+import React, { useEffect, useState, useCallback } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import Axios from "axios";
 
+/// MUI
+import {
+  AppBar,
+  Toolbar,
+  IconButton,
+  Typography,
+  Drawer,
+  List,
+  ListItem,
+  ListItemText,
+  Divider,
+  Avatar,
+  Badge,
+  Menu,
+  MenuItem,
+  Tooltip,
+  useTheme,
+  Button,
+  Box,
+  Snackbar,
+  Alert,
+} from "@mui/material";
+
+/// MUI Icons
 import {
   Menu as MenuIcon,
   Search as SearchIcon,
@@ -13,33 +34,166 @@ import {
   AccountCircle,
   DarkMode,
   LightMode,
-} from '@mui/icons-material';
+} from "@mui/icons-material";
 
-import { Search, SearchIconWrapper, StyledInputBase } from './NavbarStyle';
+/// Styled search parts (your existing styles)
+import { Search, SearchIconWrapper, StyledInputBase } from "./NavbarStyle";
 
+/// ----------------------------------------
+/// API endpoints (kept your structure)
+/// ----------------------------------------
+const API_BASE = import.meta.env.VITE_API_BASE ?? "http://127.0.0.1:8000";
+const ME_URL = `${API_BASE}/api-auth-djoser/users/me/`;
+const LOGOUT_URL = `${API_BASE}/api-auth-djoser/token/logout/`;
+
+/// Main menu links (unchanged)
 const menuLinks = [
-  { label: 'Listings', path: '/listings' },
-  { label: 'Agencies', path: '/agencies' },
-  { label: 'Add Property', path: '/add-property' },
+  { label: "Listings", path: "/listings" },
+  { label: "Agencies", path: "/agencies" },
+  { label: "Add Property", path: "/add-property" },
 ];
 
 export default function Navbar({ darkMode, toggleDarkMode }) {
+  /// ----------------------------------------
+  /// Local state
+  /// ----------------------------------------
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
-  const [user, setUser] = useState(null); // 🧠 null = not logged in
   const isMenuOpen = Boolean(anchorEl);
-  const theme = useTheme();
+  const [user, setUser] = useState(null); // { username, email, id } | null
+  const [loggingOut, setLoggingOut] = useState(false);
 
+  /// Feedback
+  const [snackOpen, setSnackOpen] = useState(false);
+  const [snackMsg, setSnackMsg] = useState("");
+  const [snackSeverity, setSnackSeverity] = useState("success");
+
+  const theme = useTheme();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  /// ----------------------------------------
+  /// Helpers
+  /// ----------------------------------------
   const toggleDrawer = (open) => () => setDrawerOpen(open);
   const handleMenuOpen = (event) => setAnchorEl(event.currentTarget);
   const handleMenuClose = () => setAnchorEl(null);
-
-  const handleLogin = () => setUser({ name: 'John Doe' });
-  const handleLogout = () => {
-    setUser(null);
-    handleMenuClose();
+  const closeSnack = (_, reason) => {
+    if (reason === "clickaway") return;
+    setSnackOpen(false);
   };
 
+  /// ----------------------------------------
+  /// Boot: attempt to hydrate user from localStorage and verify with backend
+  /// Re-run on route change so navbar stays in sync post-auth flows.
+  /// ----------------------------------------
+  useEffect(() => {
+    const token = localStorage.getItem("auth_token");
+    if (!token) {
+      setUser(null);
+      return;
+    }
+
+    // /// Use cached values for instant paint
+    const cachedUsername = localStorage.getItem("auth_username");
+    const cachedEmail = localStorage.getItem("auth_email");
+    const cachedId = localStorage.getItem("auth_user_id");
+    if (cachedUsername) {
+      setUser({
+        username: cachedUsername,
+        email: cachedEmail || "",
+        id: cachedId ? Number(cachedId) : undefined,
+      });
+    }
+
+    // /// Always verify with backend silently (cancellable)
+    const source = Axios.CancelToken.source();
+    (async () => {
+      try {
+        const res = await Axios.get(ME_URL, {
+          headers: { Authorization: `Token ${token}` },
+          cancelToken: source.token,
+        });
+        setUser(res.data);
+        // cache for instant next paint
+        localStorage.setItem("auth_username", res.data.username || "");
+        localStorage.setItem("auth_email", res.data.email || "");
+        localStorage.setItem("auth_user_id", String(res.data.id ?? ""));
+      } catch {
+        // /// Bad/expired token → clear and bounce to login softly
+        await performLocalLogout();
+        navigate("/login");
+      }
+    })();
+
+    return () => source.cancel();
+  }, [location.pathname]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /// ----------------------------------------
+  /// Local logout (no network) – used on token failures or after API logout
+  /// ----------------------------------------
+  const performLocalLogout = useCallback(async () => {
+    localStorage.removeItem("auth_token");
+    localStorage.removeItem("auth_username");
+    localStorage.removeItem("auth_email");
+    localStorage.removeItem("auth_user_id");
+    setUser(null);
+    setAnchorEl(null);
+  }, []);
+
+  /// ----------------------------------------
+  /// Logout (calls Djoser, then clears locally)
+  /// NOTE: This preserves your original logic but *adds* a proper server logout.
+  /// ----------------------------------------
+  const handleLogout = useCallback(async () => {
+    if (loggingOut) return; // guard double click
+    setAnchorEl(null);
+
+    const confirm = window.confirm("Are you sure you want to log out?");
+    if (!confirm) return;
+
+    const token = localStorage.getItem("auth_token");
+    try {
+      setLoggingOut(true);
+
+      if (token) {
+        // Djoser logout (server-side token invalidation)
+        await Axios.post(
+          LOGOUT_URL,
+          null, // body not required for token logout
+          { headers: { Authorization: `Token ${token}` } }
+        );
+      }
+
+      await performLocalLogout();
+
+      setSnackSeverity("success");
+      setSnackMsg("You have successfully logged out!");
+      setSnackOpen(true);
+
+      // Gentle redirect to login/home after a short toast
+      setTimeout(() => {
+        navigate("/login");
+      }, 800);
+    } catch (err) {
+      // Even if server logout fails, we still clear locally to protect UX
+      await performLocalLogout();
+
+      setSnackSeverity("warning");
+      setSnackMsg("Logged out locally. Server session may persist.");
+      setSnackOpen(true);
+
+      setTimeout(() => {
+        navigate("/login");
+      }, 800);
+    } finally {
+      setLoggingOut(false);
+    }
+  }, [loggingOut, navigate, performLocalLogout]);
+
+  /// ----------------------------------------
+  /// Drawer (side menu) content
+  /// ----------------------------------------
   const drawerContent = (
     <Box
       role="presentation"
@@ -47,7 +201,7 @@ export default function Navbar({ darkMode, toggleDarkMode }) {
       onKeyDown={toggleDrawer(false)}
       sx={{
         width: 260,
-        height: '100%',
+        height: "100%",
         backgroundColor: theme.palette.background.paper,
       }}
     >
@@ -62,7 +216,7 @@ export default function Navbar({ darkMode, toggleDarkMode }) {
           </ListItem>
         ))}
         <Divider sx={{ my: 1 }} />
-        {!user && (
+        {!user ? (
           <>
             <ListItem button component={Link} to="/login">
               <ListItemText primary="Login" />
@@ -71,51 +225,66 @@ export default function Navbar({ darkMode, toggleDarkMode }) {
               <ListItemText primary="Sign Up" />
             </ListItem>
           </>
+        ) : (
+          <>
+            <ListItem>
+              <ListItemText primary={`Hello, ${user.username || "User"}`} />
+            </ListItem>
+            <ListItem button onClick={handleLogout} disabled={loggingOut}>
+              <ListItemText primary={loggingOut ? "Logging out..." : "Logout"} />
+            </ListItem>
+          </>
         )}
       </List>
     </Box>
   );
 
+  /// ----------------------------------------
+  /// Render
+  /// ----------------------------------------
   return (
     <>
       <AppBar
         position="sticky"
         sx={{
-          backgroundColor: darkMode ? '#0a2540' : '#4CAF50',
+          backgroundColor: darkMode ? "#0a2540" : "#4CAF50",
           zIndex: theme.zIndex.drawer + 1,
         }}
       >
-        <Toolbar sx={{ justifyContent: 'space-between', px: 2 }}>
-          {/* LEFT: Drawer Toggle + Logo */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Toolbar sx={{ justifyContent: "space-between", px: 2 }}>
+          {/* /// LEFT: Drawer Toggle + Logo */}
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
             <IconButton
               edge="start"
               color="inherit"
               onClick={toggleDrawer(true)}
-              sx={{ display: { xs: 'block', md: 'none' } }}
+              sx={{ display: { xs: "block", md: "none" } }}
+              aria-label="open navigation"
             >
               <MenuIcon />
             </IconButton>
+
             <Typography
               component={Link}
               to="/"
               sx={{
-                color: '#fff',
-                fontWeight: 'bold',
-                fontSize: '1.25rem',
-                textDecoration: 'none',
+                color: "#fff",
+                fontWeight: "bold",
+                fontSize: "1.25rem",
+                textDecoration: "none",
               }}
             >
               RealEstate
             </Typography>
-            {/* Desktop Menu */}
-            <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: 2, ml: 2 }}>
+
+            {/* /// Desktop Menu */}
+            <Box sx={{ display: { xs: "none", md: "flex" }, gap: 2, ml: 2 }}>
               {menuLinks.map((item) => (
                 <Button
                   key={item.label}
                   component={Link}
                   to={item.path}
-                  sx={{ color: '#fff', fontWeight: 600, textTransform: 'none' }}
+                  sx={{ color: "#fff", fontWeight: 600, textTransform: "none" }}
                 >
                   {item.label}
                 </Button>
@@ -123,42 +292,66 @@ export default function Navbar({ darkMode, toggleDarkMode }) {
             </Box>
           </Box>
 
-          {/* CENTER: Search */}
-          <Box sx={{ flex: 1, mx: 4, maxWidth: 400, display: { xs: 'none', sm: 'flex' } }}>
-            <Search sx={{ width: '100%' }}>
+          {/* /// CENTER: Search */}
+          <Box
+            sx={{
+              flex: 1,
+              mx: 4,
+              maxWidth: 480,
+              display: { xs: "none", sm: "flex" },
+            }}
+          >
+            <Search sx={{ width: "100%" }}>
               <SearchIconWrapper>
                 <SearchIcon fontSize="small" />
               </SearchIconWrapper>
-              <StyledInputBase placeholder="Search…" inputProps={{ 'aria-label': 'search' }} />
+              <StyledInputBase
+                placeholder="Search…"
+                inputProps={{ "aria-label": "search" }}
+              />
             </Search>
           </Box>
 
-          {/* RIGHT: Icon buttons + Auth Buttons */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <IconButton color="inherit">
+          {/* /// RIGHT: Icons + Auth */}
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+            <IconButton color="inherit" aria-label="notifications">
               <Badge badgeContent={3} color="error">
                 <NotificationsIcon />
               </Badge>
             </IconButton>
 
-            <Tooltip title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}>
+            <Tooltip
+              title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+            >
               <IconButton color="inherit" onClick={toggleDarkMode}>
                 {darkMode ? <LightMode /> : <DarkMode />}
               </IconButton>
             </Tooltip>
 
             {user ? (
-              <IconButton onClick={handleMenuOpen} color="inherit">
-                <Avatar sx={{ width: 32, height: 32 }}>
-                  <AccountCircle />
-                </Avatar>
-              </IconButton>
+              <>
+                <Typography sx={{ color: "#fff", mr: 1 }}>
+                  {user.username || "User"}
+                </Typography>
+                <IconButton
+                  onClick={handleMenuOpen}
+                  color="inherit"
+                  aria-label="account menu"
+                  aria-controls={isMenuOpen ? "account-menu" : undefined}
+                  aria-haspopup="true"
+                  aria-expanded={isMenuOpen ? "true" : undefined}
+                >
+                  <Avatar sx={{ width: 32, height: 32 }}>
+                    <AccountCircle />
+                  </Avatar>
+                </IconButton>
+              </>
             ) : (
               <>
                 <Button
                   component={Link}
                   to="/login"
-                  sx={{ color: '#fff', textTransform: 'none', fontWeight: 500 }}
+                  sx={{ color: "#fff", textTransform: "none", fontWeight: 500 }}
                 >
                   Login
                 </Button>
@@ -166,11 +359,11 @@ export default function Navbar({ darkMode, toggleDarkMode }) {
                   component={Link}
                   to="/signup"
                   sx={{
-                    color: '#fff',
-                    border: '1px solid white',
+                    color: "#fff",
+                    border: "1px solid white",
                     borderRadius: 3,
                     px: 2,
-                    textTransform: 'none',
+                    textTransform: "none",
                   }}
                 >
                   Sign Up
@@ -181,23 +374,47 @@ export default function Navbar({ darkMode, toggleDarkMode }) {
         </Toolbar>
       </AppBar>
 
-      {/* Drawer */}
+      {/* /// Drawer */}
       <Drawer anchor="left" open={drawerOpen} onClose={toggleDrawer(false)}>
         {drawerContent}
       </Drawer>
 
-      {/* Dropdown Menu */}
+      {/* /// Dropdown Menu (avatar) */}
       <Menu
+        id="account-menu"
         anchorEl={anchorEl}
         open={isMenuOpen}
         onClose={handleMenuClose}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        transformOrigin={{ vertical: "top", horizontal: "right" }}
       >
-        <MenuItem onClick={handleMenuClose}>Profile</MenuItem>
-        <MenuItem onClick={handleMenuClose}>Settings</MenuItem>
-        <MenuItem onClick={handleLogout}>Logout</MenuItem>
+        <MenuItem component={Link} to="/profile" onClick={handleMenuClose}>
+          Profile
+        </MenuItem>
+        <MenuItem component={Link} to="/settings" onClick={handleMenuClose}>
+          Settings
+        </MenuItem>
+        <MenuItem onClick={handleLogout} disabled={loggingOut}>
+          {loggingOut ? "Logging out..." : "Logout"}
+        </MenuItem>
       </Menu>
+
+      {/* /// Snackbar (feedback) */}
+      <Snackbar
+        open={snackOpen}
+        autoHideDuration={3000}
+        onClose={closeSnack}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert
+          onClose={closeSnack}
+          severity={snackSeverity}
+          variant="filled"
+          sx={{ width: "100%" }}
+        >
+          {snackMsg}
+        </Alert>
+      </Snackbar>
     </>
   );
 }
