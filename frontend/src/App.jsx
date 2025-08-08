@@ -12,6 +12,7 @@ import Agencies from './pages/Agencies';
 import AddProperty from './pages/Property/AddProperty';
 import Login from './pages/Login';
 import Signup from './pages//Auth/Signup';
+import Profile from './pages/Profile';
 
 function App() {
   const [darkMode, setDarkMode] = useState(false);
@@ -40,6 +41,7 @@ function App() {
           <Route path="/add-property" element={<AddProperty />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
+          <Route path="/profile" element={<Profile />} />
         </Routes>
         <Footer darkMode={darkMode} />
       </BrowserRouter>
