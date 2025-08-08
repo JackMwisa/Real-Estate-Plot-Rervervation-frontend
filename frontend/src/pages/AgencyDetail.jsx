@@ -185,15 +185,29 @@ export default function AgencyDetail() {
               </Typography>
               <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 1, flexWrap: "wrap" }}>
                 {profile.phone_number ? (
-                  <Chip
-                    icon={<LocalPhoneIcon />}
-                    label={
-                      <a href={`tel:${profile.phone_number}`} style={{ color: "inherit", textDecoration: "none" }}>
-                        {profile.phone_number}
-                      </a>
-                    }
-                    variant="outlined"
-                  />
+                  <>
+                    <Chip
+                      icon={<LocalPhoneIcon />}
+                      label={
+                        <a
+                          href={`tel:${profile.phone_number}`}
+                          style={{ color: "inherit", textDecoration: "none" }}
+                        >
+                          {profile.phone_number}
+                        </a>
+                      }
+                      variant="outlined"
+                    />
+                    <Button
+                      size="small"
+                      startIcon={<LocalPhoneIcon />}
+                      sx={{ textTransform: "none" }}
+                      component="a"
+                      href={`tel:${profile.phone_number}`}
+                    >
+                      Call
+                    </Button>
+                  </>
                 ) : (
                   <Chip icon={<InfoOutlinedIcon />} label="No phone number" variant="outlined" />
                 )}
@@ -211,7 +225,9 @@ export default function AgencyDetail() {
                 </Typography>
               )}
             </Grid>
-            {profile.seller && (
+
+            {/* Optional: avoid linking to same page */}
+            {profile.seller && String(profile.seller) !== String(id) && (
               <Grid item xs="auto">
                 <Button
                   variant="contained"
@@ -247,7 +263,7 @@ export default function AgencyDetail() {
 
             return (
               <Grid item xs={12} sm={6} md={4} lg={3} key={`listing-${l.id}`}>
-                <Card sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
+                <Card sx={{ height: "100%", display: "flex", flexDirection: "column", position: "relative" }}>
                   <CardActionArea onClick={() => navigate(`/listings/${l.id}`)}>
                     <CardMedia
                       component="img"
@@ -278,11 +294,43 @@ export default function AgencyDetail() {
                       )}
                     </CardContent>
                   </CardActionArea>
-                  <CardActions sx={{ mt: "auto", px: 2, pb: 2 }}>
+
+                  {/* Quick “fly to” style affordance if you later place a mini-map here */}
+                  <IconButton
+                    size="small"
+                    sx={{
+                      position: "absolute",
+                      top: 8,
+                      right: 8,
+                      backgroundColor: "#fff",
+                      "&:hover": { backgroundColor: "rgba(0,0,0,0.06)" },
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/listings/${l.id}`);
+                    }}
+                  >
+                    <RoomIcon color="primary" />
+                  </IconButton>
+
+                  <CardActions sx={{ mt: "auto", px: 2, pb: 2, gap: 1 }}>
                     <Chip label={priceText} color="default" />
-                    <Button sx={{ ml: "auto" }} size="small" onClick={() => navigate(`/listings/${l.id}`)}>
-                      View
-                    </Button>
+                    <Box sx={{ ml: "auto", display: "flex", gap: 1 }}>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={() => navigate(`/listings/${l.id}`)}
+                      >
+                        View
+                      </Button>
+                      <Button
+                        size="small"
+                        variant="contained"
+                        onClick={() => navigate(`/pay/${l.id}`)}
+                      >
+                        Reserve / Pay
+                      </Button>
+                    </Box>
                   </CardActions>
                 </Card>
               </Grid>
