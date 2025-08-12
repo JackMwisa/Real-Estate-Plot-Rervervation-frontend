@@ -1,4 +1,4 @@
-
+// src/components/NotificationBell.jsx
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import Axios from "axios";
 import {
@@ -7,19 +7,19 @@ import {
   Menu,
   MenuItem,
   ListItemText,
-  ListItemSecondaryAction,
   Typography,
   Divider,
   Box,
   Button,
+  CircularProgress,
+  Tooltip,
 } from "@mui/material";
-
 import NotificationsIcon from "@mui/icons-material/Notifications";
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? "http://127.0.0.1:8000";
-const LIST_URL = `${API_BASE}/api/notifications/`;                 // GET (paginated allowed)
-const UNREAD_URL = `${API_BASE}/api/notifications/unread-count/`;  // GET { unread: n }
-const MARK_READ_URL = (id) => `${API_BASE}/api/notifications/${id}/read/`; // POST
+const LIST_URL = `${API_BASE}/api/notifications/`;
+const UNREAD_URL = `${API_BASE}/api/notifications/unread-count/`;
+const MARK_READ_URL = (id) => `${API_BASE}/api/notifications/${id}/read/`;
 
 export default function NotificationBell() {
   const [anchorEl, setAnchorEl] = useState(null);
@@ -31,13 +31,20 @@ export default function NotificationBell() {
 
   const token = useMemo(() => localStorage.getItem("auth_token") || "", []);
 
+  const authHeader = token ? { Authorization: `Token ${token}` } : undefined;
+
   const fetchUnread = useCallback(async () => {
     if (!token) return setUnread(0);
     try {
-      const { data } = await Axios.get(UNREAD_URL, {
-        headers: { Authorization: `Token ${token}` },
-      });
-      setUnread(data?.unread ?? 0);
+      const { data } = await Axios.get(UNREAD_URL, { headers: authHeader });
+      // Support either { unread_count } or { unread }
+      const value =
+        typeof data?.unread_count === "number"
+          ? data.unread_count
+          : typeof data?.unread === "number"
+          ? data.unread
+          : 0;
+      setUnread(value);
     } catch {
       setUnread(0);
     }
@@ -48,10 +55,11 @@ export default function NotificationBell() {
     setLoading(true);
     try {
       const { data } = await Axios.get(LIST_URL, {
-        headers: { Authorization: `Token ${token}` },
+        headers: authHeader,
         params: { page: 1, page_size: 10 },
       });
-      setItems(data?.results ?? data ?? []);
+      // Handle paginated { results: [...] } and non-paginated [...]
+      setItems(Array.isArray(data) ? data : data?.results ?? []);
     } catch {
       setItems([]);
     } finally {
@@ -61,6 +69,7 @@ export default function NotificationBell() {
 
   useEffect(() => {
     fetchUnread();
+    // Poll every 45s (you can switch to WebSockets later)
     const id = setInterval(fetchUnread, 45000);
     return () => clearInterval(id);
   }, [fetchUnread]);
@@ -75,25 +84,28 @@ export default function NotificationBell() {
   const markRead = async (id) => {
     if (!token) return;
     try {
-      await Axios.post(MARK_READ_URL(id), null, {
-        headers: { Authorization: `Token ${token}` },
-      });
+      await Axios.post(MARK_READ_URL(id), null, { headers: authHeader });
       setItems((prev) => prev.map((n) => (n.id === id ? { ...n, is_read: true } : n)));
       setUnread((u) => Math.max(0, u - 1));
-    } catch {}
+    } catch {
+      /* ignore */
+    }
   };
 
   const markAllRead = async () => {
-    await Promise.all(items.filter((n) => !n.is_read).map((n) => markRead(n.id)));
+    const unreadItems = items.filter((n) => !n.is_read);
+    await Promise.all(unreadItems.map((n) => markRead(n.id)));
   };
 
   return (
     <>
-      <IconButton color="inherit" aria-label="notifications" onClick={handleOpen}>
-        <Badge badgeContent={unread} color="error">
-          <NotificationsIcon />
-        </Badge>
-      </IconButton>
+      <Tooltip title="Notifications">
+        <IconButton color="inherit" aria-label="notifications" onClick={handleOpen}>
+          <Badge badgeContent={unread} color="error">
+            <NotificationsIcon />
+          </Badge>
+        </IconButton>
+      </Tooltip>
 
       <Menu
         anchorEl={anchorEl}
@@ -103,15 +115,34 @@ export default function NotificationBell() {
         transformOrigin={{ vertical: "top", horizontal: "right" }}
         PaperProps={{ sx: { width: 360, maxWidth: "90vw" } }}
       >
-        <Box sx={{ px: 2, py: 1.5, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <Box
+          sx={{
+            px: 2,
+            py: 1.5,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
           <Typography variant="subtitle1" fontWeight={700}>
             Notifications
           </Typography>
           {!!items.length && (
-            <Button size="small" onClick={markAllRead}>Mark all read</Button>
+            <Button size="small" onClick={markAllRead}>
+              Mark all read
+            </Button>
           )}
         </Box>
         <Divider />
+
+        {loading && (
+          <Box sx={{ px: 2, py: 3, display: "flex", gap: 1, alignItems: "center" }}>
+            <CircularProgress size={18} />
+            <Typography variant="body2" color="text.secondary">
+              Loading…
+            </Typography>
+          </Box>
+        )}
 
         {!loading && !items.length && (
           <Box sx={{ px: 2, py: 3 }}>
@@ -121,38 +152,50 @@ export default function NotificationBell() {
           </Box>
         )}
 
-        {items.map((n) => (
-          <MenuItem
-            key={n.id}
-            component={n.url ? "a" : "div"}
-            href={n.url || undefined}
-            onClick={(e) => {
-              if (!n.url) e.preventDefault();
-              if (!n.is_read) markRead(n.id);
-            }}
-            sx={{ alignItems: "flex-start", gap: 1.25, opacity: n.is_read ? 0.7 : 1 }}
-          >
-            <ListItemText
-              primary={
-                <Typography variant="body2" fontWeight={n.is_read ? 400 : 700}>
-                  {n.message}
-                </Typography>
-              }
-              secondary={
-                <Typography variant="caption" color="text.secondary">
-                  {n.created_at ? new Date(n.created_at).toLocaleString() : ""}
-                </Typography>
-              }
-            />
-            {!n.is_read && (
-              <ListItemSecondaryAction>
-                <Button size="small" onClick={(e) => { e.preventDefault(); markRead(n.id); }}>
-                  Read
-                </Button>
-              </ListItemSecondaryAction>
-            )}
-          </MenuItem>
-        ))}
+        {!loading &&
+          items.map((n) => {
+            const href = n.url || undefined;
+            return (
+              <MenuItem
+                key={n.id}
+                component={href ? "a" : "div"}
+                href={href}
+                onClick={(e) => {
+                  // If it has a URL, let the browser navigate, but still mark read
+                  if (!href) e.preventDefault();
+                  if (!n.is_read) markRead(n.id);
+                  if (href) handleClose();
+                }}
+                sx={{ alignItems: "flex-start", gap: 1.25, opacity: n.is_read ? 0.7 : 1 }}
+              >
+                <ListItemText
+                  primary={
+                    <Typography variant="body2" fontWeight={n.is_read ? 400 : 700}>
+                      {n.message}
+                    </Typography>
+                  }
+                  secondary={
+                    <Typography variant="caption" color="text.secondary">
+                      {n.created_at ? new Date(n.created_at).toLocaleString() : ""}
+                    </Typography>
+                  }
+                />
+                {!n.is_read && (
+                  <Box sx={{ ml: "auto" }}>
+                    <Button
+                      size="small"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        markRead(n.id);
+                      }}
+                    >
+                      Read
+                    </Button>
+                  </Box>
+                )}
+              </MenuItem>
+            );
+          })}
       </Menu>
     </>
   );
