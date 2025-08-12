@@ -26,6 +26,8 @@ import {
   Alert,
 } from "@mui/material";
 
+import NotificationBell from "../NotificationBell";
+
 /// MUI Icons
 import {
   Menu as MenuIcon,
@@ -320,11 +322,8 @@ export default function Navbar({ darkMode, toggleDarkMode }) {
 
           {/* RIGHT: Icons + Auth */}
           <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-            <IconButton color="inherit" aria-label="notifications">
-              <Badge badgeContent={3} color="error">
-                <NotificationsIcon />
-              </Badge>
-            </IconButton>
+            {user && <NotificationBell />}
+
 
             <Tooltip title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}>
               <IconButton color="inherit" onClick={toggleDarkMode}>
@@ -345,7 +344,7 @@ export default function Navbar({ darkMode, toggleDarkMode }) {
                   aria-haspopup="true"
                   aria-expanded={isMenuOpen ? "true" : undefined}
                 >
-                  {/* ✅ Show profile picture if we have it, else fallback icon */}
+                  {/*  Show profile picture if we have it, else fallback icon */}
                   <Avatar
                     src={user.profile_picture || ""}
                     alt={user.username || "User"}

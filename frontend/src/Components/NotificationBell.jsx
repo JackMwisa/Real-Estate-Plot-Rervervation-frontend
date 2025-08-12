@@ -13,6 +13,7 @@ import {
   Box,
   Button,
 } from "@mui/material";
+
 import NotificationsIcon from "@mui/icons-material/Notifications";
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? "http://127.0.0.1:8000";
