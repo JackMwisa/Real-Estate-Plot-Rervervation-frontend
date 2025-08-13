@@ -64,8 +64,11 @@ function ListingUpdate({ listingData, closeDialog }) {
       case "closeSnack":
         draft.openSnack = false;
         break;
+      default:
+        break;
     }
   }
+
 
   const [state, dispatch] = useImmerReducer(reducer, initialState);
 
